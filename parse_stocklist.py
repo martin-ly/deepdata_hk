@@ -8,14 +8,14 @@ def run(ctx, html):
     bs = BeautifulSoup(open(html), 'html5lib', from_encoding='utf8')
     trs = bs.find_all('tr', class_=re.compile(r'TableContentStyle\d{1}'))
     if len(trs) == 0:
-        ctx.onerror(u'抓取的证券代码数量为0')
+        ctx.onerror('抓取的证券代码数量为0')
     for tr in trs:
-        code = unicode(tr.find('td', align='Center').string)
-        name = unicode(tr.find('span').string)
+        code = unicode(tr.find('td', align='Center').string).encode('utf8')
+        name = unicode(tr.find('span').string).encode('utf8')
         if len(code) != 5 or int(code) == 0:
-            ctx.onerror(u'证券代码非法：%s' % code)
+            ctx.onerror('证券代码非法：%s' % code)
         else:
-            ctx.runjs(('deep.js', code + '_deep.html', [code, ], 'deep', u'抓取%s深度持股数据' % name))
+            ctx.runjs(('deep.js', code + '_deep.html', {'code' : code}, 'deep', '%s - 券商追踪' % name))
 
 if __name__ == '__main__':
     run('20160203/stocklist.html')
