@@ -15,7 +15,7 @@ def run(ctx, html):
         if len(code) != 5 or int(code) == 0:
             ctx.onerror('证券代码非法：%s' % code)
         else:
-            ctx.runjs(('deep.js', code + '_deep.html', {'code' : code}, 'deep', '%s - 券商追踪' % name))
+            ctx.runjs(('qszz.js', code + '_qszz.html', {'code' : code}, 'qszz', '%s - 券商追踪' % name))
 
 if __name__ == '__main__':
     run('20160203/stocklist.html')
