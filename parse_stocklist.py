@@ -3,7 +3,7 @@
 import re
 from bs4 import BeautifulSoup
 
-def run(ctx, html):
+def run(ctx, html, kwargs):
     # casperjs输出的文件已经是utf8编码，而不管在html文件头中指定的编码
     bs = BeautifulSoup(open(html), 'html5lib', from_encoding='utf8')
     trs = bs.find_all('tr', class_=re.compile(r'TableContentStyle\d{1}'))

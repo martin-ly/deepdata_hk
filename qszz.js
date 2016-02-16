@@ -1,4 +1,4 @@
-// casperjs test qszz.js --output=111.html --code=02940
+// casperjs test qszz.js --output=111.html --code=00003
 
 var fs = require('fs');
 var utils = require('utils');
@@ -10,7 +10,7 @@ if (fname==undefined) {
 
 var param = casper.cli.raw.get("code");
 if (param==undefined) {
-    casper.echo('您想要抓取哪一只港股的深度数据？').exit();
+    casper.echo('您想要抓取哪一只港股的券商追踪数据？').exit();
     test.done();
 }
 
@@ -31,7 +31,7 @@ casper.test.begin('券商追踪'+param, 0, function suite(test) {
         casper.capture(fname+'_1.png')
         fs.write(fname+'_1.html', this.getPageContent(), 'w');
 
-        casper.evaluate(function(code){
+        casper.evaluate(function(code) {
             document.querySelector('input#txt_stock_code').value = code;
             document.querySelector('a[href*="submit()"]').click();
         }, param);

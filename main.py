@@ -15,6 +15,7 @@ ctx.runjs可以从py脚本中调用js脚本继续抓取工作。
 '''
 
 import subprocess, time, os, sys, traceback
+from time import clock
 
 today = time.strftime('%Y%m%d')
 failog = '%s/fail.log' % today
@@ -82,7 +83,8 @@ class ContextJS:
                     newctx.onerror('模块中找不到run方法')
                 else:
                     try:
-                        run(newctx, '%s/%s' % (today, output))
+                        kwargs['today'] = today
+                        run(newctx, '%s/%s' % (today, output), kwargs)
                     except:
                         ret = traceback.format_exc()
                         newctx.onerror(ret)
@@ -94,6 +96,8 @@ if __name__ == '__main__':
     elif os.path.exists(failog):
         os.remove(failog)
     for task in init_tasks:
+        start = clock()
         ctx = ContextJS()
         ctx.runjs(task)
-    print '========== FINISHED!! =========='
+        finish = clock()
+    print '========== FINISHED TASK IN %f ==========' % (finish - start) / 10000
