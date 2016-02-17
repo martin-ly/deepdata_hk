@@ -11,11 +11,11 @@ def run(ctx, html, kwargs):
         ctx.onerror('抓取的证券代码数量为0')
     for tr in trs:
         code = unicode(tr.find('td', align='Center').string).encode('utf8')
-        name = unicode(tr.find('span').string).encode('utf8')
+        name = unicode(tr.find('span').string)
         if len(code) != 5 or int(code) == 0:
             ctx.onerror('证券代码非法：%s' % code)
         else:
-            ctx.runjs(('qszz.js', code + '_qszz.html', {'code' : code}, 'qszz', '%s - 券商追踪' % name))
+            ctx.runjs(('qszz.js', code + '_qszz.html', {'code' : code}, 'qszz', u'%s - 券商追踪' % name))
 
 if __name__ == '__main__':
     run('20160203/stocklist.html')

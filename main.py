@@ -16,13 +16,14 @@ ctx.runjs可以从py脚本中调用js脚本继续抓取工作。
 
 import subprocess, time, os, sys, traceback
 from time import clock
+from multiprocessing import Pool
 
 today = time.strftime('%Y%m%d')
 failog = '%s/fail.log' % today
 
 # jsfile, output, params, pymodname, comment
 init_tasks = [
-    ('getstocklist.js', 'stocklist.html', {}, 'parse_stocklist', '获取当日全部港股代码'),
+    ('getstocklist.js', 'stocklist.html', {}, 'parse_stocklist', u'获取当日全部港股代码'),
 ]
 
 class ContextJS:
@@ -33,7 +34,7 @@ class ContextJS:
         self.error = True
         print msg.decode('utf8')
         with open(failog, 'a+') as flog:
-            flog.write('>>>>> %s %s\n' % (self.comment, self.jsfile if self._runjs else self.pyfile))
+            flog.write('>>>>> %s %s\n' % (self.comment.encode('utf8'), self.jsfile if self._runjs else self.pyfile))
             flog.write(msg + '\n')
 
     def finish(self):
@@ -49,7 +50,7 @@ class ContextJS:
         print '>>>>>', newctx.comment, newctx.jsfile
 
         if not os.path.exists('./' + newctx.jsfile):
-            newctx.onerror('脚本%s不存在' % newctx.jsfile)
+            newctx.onerror(u'脚本%s不存在' % newctx.jsfile)
             return
 
         command = ['casperjs', 'test', './' + newctx.jsfile, '--output=%s' % newctx.htmlfile] + ['--%s=%s' % (k, v) for k, v in kwargs.items()]
@@ -60,8 +61,7 @@ class ContextJS:
         out = out.split('\n')
         if len(out) == 1:
             out.append('未知执行结果，按失败处理')
-        while len(out[-1]) == 0:
-            out = out[:-1]
+        out = [l.strip() for l in out if len(l.strip()) > 0]
         if out[-1] == 'OK' or out[-2] == 'OK':
             ret = True
         else:
@@ -80,7 +80,7 @@ class ContextJS:
             else:
                 run = getattr(mod, 'run', None)
                 if run is None:
-                    newctx.onerror('模块中找不到run方法')
+                    newctx.onerror(u'模块中找不到run方法')
                 else:
                     try:
                         kwargs['today'] = today
@@ -90,14 +90,25 @@ class ContextJS:
                         newctx.onerror(ret)
         newctx.finish()
 
+def initTask(task):
+    start = clock()
+    ContextJS().runjs(task)
+    finish = clock()
+    return finish - start
+
 if __name__ == '__main__':
     if not os.path.exists(today):
         os.mkdir(today)
     elif os.path.exists(failog):
         os.remove(failog)
-    for task in init_tasks:
-        start = clock()
-        ctx = ContextJS()
-        ctx.runjs(task)
-        finish = clock()
-    print '========== FINISHED TASK IN %f ==========' % (finish - start) / 10000
+
+    p = Pool(10)
+    p.map_async(initTask, task)
+#    for task in init_tasks:
+#        start = clock()
+#        ctx = ContextJS()
+#        ctx.runjs(task)
+#        finish = clock()
+    elapse = finish - start
+    hours, minutes, seconds = elapse / 3600, (elapse % 3600) / 60, elapse % 60
+    print u'========== FINISHED TASK IN %dh %dm %ds . ==========' % (hours, minutes, seconds)
