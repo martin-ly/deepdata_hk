@@ -57,7 +57,7 @@ casper.test.begin('券商追踪'+param, 0, function suite(test) {
                 else {
                     casper.capture(fname+'_2.png');
                     fs.write(fname+'_2.html', this.getPageContent(), 'w');
-                    casper.echo('没有找到搜索关键字');
+                    casper.echo('Key Not Found');
                 }
             });
     });

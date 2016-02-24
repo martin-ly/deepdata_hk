@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 def run(ctx, html, kwargs):
     bs = BeautifulSoup(open(html), 'html5lib', from_encoding='utf8')
 
-    total, idx = 0, [-1, -1, -1]
+    total, idx = 0, [-1, -1, -1, -1]
     anchor = bs.find(text=re.compile(r'result list title'))
     if anchor is None:
         ctx.onerror('找不到定位点1')
@@ -24,6 +24,8 @@ def run(ctx, html, kwargs):
             idx[1] = i
         elif colname.find('持股量') != -1:
             idx[2] = i
+        elif colname.find('百份比') != -1:
+            idx[3] = i
     if idx[0] == -1 or idx[1] == -1 or idx[2] == -1:
         ctx.onerror('没有找到合适的数据列: %s' % idx)
         return
@@ -40,21 +42,23 @@ def run(ctx, html, kwargs):
             for i, s in enumerate(node.strings):
                 if i in idx:
                     l.append(unicode(s).encode('utf8'))
+            if idx[3] == -1:
+                l.append(None)
             partners.append(tuple(l))
-            if len(l) != 3:
+            if len(l) != 4:
                 if ctx is None:
-                    print '一行数据不是3条'
+                    print '一行数据不是4条'
                 else:
-                    ctx.onerror('一行数据不是3条')
+                    ctx.onerror('一行数据不是4条')
 
-    print u'解析 %d 条数据' % len(partners)
+    print '解析 %d 条数据' % len(partners)
     if len(partners) == 0:
         ctx.onerror('没有抓取到数据')
     else:
-        deephk.save_json(kwargs['today'], kwargs['code'], partners)
+        deephk.save_qszz(kwargs['today'], kwargs['code'], partners)
     return partners
 
 if __name__ == '__main__':
-    partners = run(None, '111.html', {'today' : '22222', 'code' : '00003'})
+    partners = run(None, '111.html', {'today' : '20160224', 'code' : '01153'})
     for p in partners:
         print p
