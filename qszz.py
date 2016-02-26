@@ -1,6 +1,6 @@
 #coding: utf8
 
-import re, deephk
+import re, deephk, os
 from bs4 import BeautifulSoup
 
 def run(ctx, html, kwargs):
@@ -56,6 +56,7 @@ def run(ctx, html, kwargs):
         ctx.onerror('没有抓取到数据')
     else:
         deephk.save_qszz(kwargs['today'], kwargs['code'], partners)
+        os.remove(html)
     return partners
 
 if __name__ == '__main__':

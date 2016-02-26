@@ -45,10 +45,10 @@ class ContextJS:
                 flog.write('>>>>> %s %s\n' % (self.comment, self.jsfile if self._runjs else self.pyfile + '.py'))
                 flog.write(msg + '\n')
 
-    def finish(self):
-        '''如果py处理过程中没有错误发生，处理结束后删除html文件'''
-        if not self.error and self.htmlfile is not None:
-            os.remove(self.htmlfile)
+#    def finish(self):
+#        '''如果py处理过程中没有错误发生，处理结束后删除html文件'''
+#        if not self.error and self.htmlfile is not None:
+#            os.remove(self.htmlfile)
 
     def addtask(self, subtask):
         '''动态添加子任务需要遵照 [jsfile, output, params, pymodname, comment] 格式'''
@@ -62,6 +62,7 @@ class ContextJS:
         self.stdout = StringIO.StringIO()
         self.oldstdout, sys.stdout = sys.stdout, self.stdout
         self.jsfile, output, kwargs, self.pyfile, self.comment, self.name, self.retry_count = task
+        kwargs['today'] = today
         self._runjs = True
         self.htmlfile = '%s/%s' % (today, output)
         print '>>>>>', self.comment, self.jsfile
@@ -95,7 +96,7 @@ class ContextJS:
 
         if ret == 1:        #js执行失败，写入失败日志备查
             self.onerror(out)
-            self.finish()
+#            self.finish()
         elif ret == 2:      #重试
             print '%s' % out#.decode('utf8')
         else:               #js执行成功，调用py
@@ -111,12 +112,11 @@ class ContextJS:
                     self.onerror('模块中找不到run方法')
                 else:
                     try:
-                        kwargs['today'] = today
                         run(self, '%s/%s' % (today, output), kwargs)
                     except:
                         ret = traceback.format_exc()
                         self.onerror(ret)
-            self.finish()
+#            self.finish()
 
 def spider_process():
     def addsubtask(task):

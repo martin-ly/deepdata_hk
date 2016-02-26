@@ -1,6 +1,6 @@
 #coding: utf8
 
-import re
+import re, os
 from bs4 import BeautifulSoup
 
 def run(ctx, html, kwargs):
@@ -16,6 +16,8 @@ def run(ctx, html, kwargs):
             ctx.onerror('证券代码非法：%s' % code)
         else:
             ctx.addtask(['qszz.js', code + '_qszz.html', {'code' : code}, 'qszz', '%s - 券商追踪' % name])
+            ctx.addtask(['gfjm.js', code + '_gfjm.html', {'code' : code}, 'gfjm_end', '%s - 股份解码' % name])
+    os.remove(html)
 
 if __name__ == '__main__':
     run('20160203/stocklist.html')
