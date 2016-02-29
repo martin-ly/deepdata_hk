@@ -1,6 +1,6 @@
 #coding: utf8
 
-import re, deephk, os
+import re, deephk
 from bs4 import BeautifulSoup
 
 def run(ctx, code, kwargs):
@@ -10,7 +10,7 @@ def run(ctx, code, kwargs):
         main = fp.readlines()
     main = [x.strip(' \t\r\n').split(';') for x in main]
 
-    output = []
+    output, tmpfiles = [], []
     for i, x in enumerate(main):
         fclick = '%s/%s.%d.gfjm.click.html' % (today, code, i+1)
         bs = BeautifulSoup(open(fclick), 'html5lib', from_encoding='utf8')
@@ -21,15 +21,17 @@ def run(ctx, code, kwargs):
         s = ''.join([unicode(ss).strip(' \t\r\n') for ss in anchor.stripped_strings])
         x.append(s.encode('utf8'))
         output.append(x)
-        os.remove(fclick)
-        os.remove('%s/%s.%d.gfjm.click.png' % (today, code, i+1))
+        tmpfiles.append(fclick)
+        tmpfiles.append('%s/%s.%d.gfjm.click.png' % (today, code, i+1))
 
+    print '解析 %d 条数据' % len(output)
     deephk.save_gfjm(today, code, output)
-    os.remove('%s/%s.gfjm.tmp' % (today, code))
-    os.remove('%s/%s.gfjm.click' % (today, code))
-    os.remove('%s/%s.gfjm.click.all' % (today, code))
-    os.remove('%s/%s.gfjm.html' % (today, code))
-    os.remove('%s/%s.gfjm.png' % (today, code))
+    tmpfiles.append('%s/%s.gfjm.tmp' % (today, code))
+    tmpfiles.append('%s/%s.gfjm.click' % (today, code))
+    tmpfiles.append('%s/%s.gfjm.click.all' % (today, code))
+    tmpfiles.append('%s/%s.gfjm.html' % (today, code))
+    tmpfiles.append('%s/%s.gfjm.png' % (today, code))
+    ctx.onfinish(tmpfiles)
 
 if __name__ == '__main__':
     run(None, '20160226/00007_gfjm.html', {'today' : '20160226'})

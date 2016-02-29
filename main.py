@@ -24,9 +24,9 @@ process_num, retry_num = 10, 5     #爬虫进程数量，失败重试次数
 loglock = Lock()
 EndPoint = 'tcp://127.0.0.1:9066'
 
-# jsfile, output, params, pymodname, comment
+# jsfile, output, params, jstimeout, pymodname, comment
 init_tasks = {
-    u'港股深度数据挖掘' : ['getstocklist.js', 'stocklist.html', {}, 'parse_stocklist', '获取当日全部港股代码'],
+    u'港股深度数据挖掘' : ['getstocklist.js', 'stocklist.html', {}, 30, 'parse_stocklist', '获取当日全部港股代码'],
 }
 
 class ContextJS:
@@ -42,18 +42,26 @@ class ContextJS:
             print msg
         with loglock:
             with open(failog, 'a+') as flog:
-                flog.write('>>>>> %s %s\n' % (self.comment, self.jsfile if self._runjs else self.pyfile + '.py'))
+                flog.write('>>>>>[%d] %s %s\n' % (int(self.retry_count), self.comment, self.jsfile if self._runjs else self.pyfile + '.py'))
                 flog.write(msg + '\n')
 
-#    def finish(self):
-#        '''如果py处理过程中没有错误发生，处理结束后删除html文件'''
-#        if not self.error and self.htmlfile is not None:
-#            os.remove(self.htmlfile)
+    def onfinish(self, files):
+        '''删除子任务产生的临时文件'''
+        for f in files:
+            if os.path.exists(f):
+                os.remove(f)
 
     def addtask(self, subtask):
-        '''动态添加子任务需要遵照 [jsfile, output, params, pymodname, comment] 格式'''
-        if isinstance(subtask, list) and len(subtask) == 5:
-            subtask += [self.name, 0]       #py文件返回5元素元组，需要添加2元素
+        '''动态添加子任务需要遵照 [jsfile, output, params, jstimeout, pymodname, comment] 格式
+        jsfile: js文件名，包含扩展名
+        output: js输出的网页文件名，注意：脚本可以直接使用这个文件名，也可以由js脚本和py脚本双方协商文件名规则
+        params: 任务参数，自定义，引擎会在参数中加上today，表示执行日期，格式为yyyymmdd
+        jstimeout: js脚本执行超时时间，单位为秒，超过时间将杀死casperjs进程
+        pymodname: js脚本执行完成后，需要调用的py脚本
+        comment: 任务说明，显示用
+        '''
+        if isinstance(subtask, list) and len(subtask) == 6:
+            subtask += [self.name, 0]       #py文件返回6元素元组，需要添加2元素
             self.cb(subtask)
         else:
             print '子任务非法：', subtask
@@ -61,11 +69,11 @@ class ContextJS:
     def runjs(self, task):
         self.stdout = StringIO.StringIO()
         self.oldstdout, sys.stdout = sys.stdout, self.stdout
-        self.jsfile, output, kwargs, self.pyfile, self.comment, self.name, self.retry_count = task
+        self.jsfile, output, kwargs, jstimeout, self.pyfile, self.comment, self.name, self.retry_count = task
         kwargs['today'] = today
         self._runjs = True
         self.htmlfile = '%s/%s' % (today, output)
-        print '>>>>>', self.comment, self.jsfile
+        print '>>>>>[%d]' % (int(self.retry_count)+1,), self.comment, self.jsfile
 
         if not os.path.exists('./' + self.jsfile):
             self.onerror(u'脚本%s不存在' % self.jsfile)
@@ -74,7 +82,15 @@ class ContextJS:
         self.retry = False
         command = ['casperjs', 'test', './' + self.jsfile, '--output=%s' % self.htmlfile] + ['--%s=%s' % (k, v) for k, v in kwargs.items()]
         command_str = '\t' + ' '.join(command) + '\n'
+
         p = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        deadline = time.time() + jstimeout
+        while time.time() < deadline and p.poll() == None:
+            time.sleep(0.01)
+        if p.poll() == None:
+            print '超时'
+            p.kill()
+
         out, _ = p.communicate()
         out = command_str + out
         out = out.split('\n')
@@ -96,11 +112,10 @@ class ContextJS:
 
         if ret == 1:        #js执行失败，写入失败日志备查
             self.onerror(out)
-#            self.finish()
         elif ret == 2:      #重试
-            print '%s' % out#.decode('utf8')
+            print '%s' % out
         else:               #js执行成功，调用py
-            print '%s' % out#.decode('utf8')
+            print '%s' % out
             self._runjs = False
             try:
                 mod = __import__(self.pyfile)
@@ -116,7 +131,6 @@ class ContextJS:
                     except:
                         ret = traceback.format_exc()
                         self.onerror(ret)
-#            self.finish()
 
 def spider_process():
     def addsubtask(task):
@@ -128,7 +142,7 @@ def spider_process():
 
     while True:
         task = sockp.recv_multipart()[-1]
-        task = cPickle.loads(task)      #接收7元素元组
+        task = cPickle.loads(task)      #接收8元素元组
         if task is None:
             break
         ctx = ContextJS(addsubtask)
@@ -164,16 +178,18 @@ if __name__ == '__main__':
             ts[name]['count'] += 1
         else:
             ts[name] = {'count' : 1, 'start' : clock()}
-        task += [name, 0]       #init_tasks里面是5元素元组，添加2元素
+        task += [name, 0]       #init_tasks里面是6元素元组，添加2元素
         sockm.send('', zmq.SNDMORE)
         sockm.send_pyobj(task)
 
+    queue, waitingps = [], []  #待分配任务，待机工作进程
     while True:
         task = sockm.recv_multipart()
         subtask = cPickle.loads(task[-1])
         if len(subtask) > 1:
             name = subtask[-2]
             ts[name]['count'] += 1
+#            queue.append(subtask)
             sockm.send('', zmq.SNDMORE)
             sockm.send_pyobj(subtask)
         else:

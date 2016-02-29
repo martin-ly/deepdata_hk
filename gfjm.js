@@ -36,6 +36,10 @@ casper.test.begin('股份解码'+param, 0, function suite(test) {
         fs.write(fname+'.gfjm.1.html', this.getPageContent(), 'w');
 
         casper.evaluate(function(code) {
+            if (document.querySelector('select#ddlStartDateDD').value == '29' && document.querySelector('select#ddlStartDateMM').value == '02') {
+                document.querySelector('select#ddlStartDateDD').value = '01';
+                document.querySelector('select#ddlStartDateMM').value = '03';
+            }
             document.querySelector('input#txtStockCode').value = code;
             document.querySelector('input#cmdSearch').click();
         }, param);
