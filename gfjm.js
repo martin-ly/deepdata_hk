@@ -1,4 +1,4 @@
-// casperjs test gfjm.js --output=111 --code=00001 --today=20160226
+// casperjs test gfjm.js --output=111 --code=90005 --today=20160226
 
 var fs = require('fs');
 var utils = require('utils');
@@ -47,48 +47,58 @@ casper.test.begin('股份解码'+param, 0, function suite(test) {
         casper.waitForText('返回頁頂', function() {
             casper.capture(fname+'.gfjm.2.png')
             fs.write(fname+'.gfjm.2.html', this.getPageContent(), 'w');
-            casper.clickLabel('所有披露權益通知', 'a');
-
-            casper.waitForText('返回頁頂', function() {
-                casper.capture(fname+'.gfjm.png')
-                fs.write(fname+'.gfjm.html', this.getPageContent(), 'w');
-                fs.remove(fname+'.gfjm.1.png');
-                fs.remove(fname+'.gfjm.1.html');
-                fs.remove(fname+'.gfjm.2.png');
-                fs.remove(fname+'.gfjm.2.html');
-
-                var out = '';
-                var finished = false;
-                subprocess.execFile("python", ["gfjm_main.py", fname], null, function(err, stdout, stderr) {
-                    out = stdout;
-                    finished = true;
+            if (casper.fetchText('span#lblRecCount') == '0') {
+                casper.then(function() {
+                    fs.remove(fname+'.gfjm.1.png');
+                    fs.remove(fname+'.gfjm.1.html');
+                    fs.remove(fname+'.gfjm.2.png');
+                    fs.remove(fname+'.gfjm.2.html');
+                    casper.echo('OK');
                 });
+            }
+            else {
+                casper.clickLabel('所有披露權益通知', 'a');
+                casper.waitForText('返回頁頂', function() {
+                    casper.capture(fname+'.gfjm.png')
+                    fs.write(fname+'.gfjm.html', this.getPageContent(), 'w');
+                    fs.remove(fname+'.gfjm.1.png');
+                    fs.remove(fname+'.gfjm.1.html');
+                    fs.remove(fname+'.gfjm.2.png');
+                    fs.remove(fname+'.gfjm.2.html');
 
-                this.waitFor(function check() {
-                    return finished;
-                }, function then() {
-                    out = out.split('\r\n');
-                    var idx = 0;
-                    casper.each(out, function(self, item) {
-                        if (item.length > 0) {
-                            casper.then(function() {
-                                idx += 1;
-                                casper.echo('Click ' + item);
-                                casper.click(x(item));
-                                casper.waitForSelector('input#cmdBack', function() {
-                                    casper.capture(fname+'.'+parseInt(idx)+'.gfjm.click.png')
-                                    fs.write(fname+'.'+parseInt(idx)+'.gfjm.click.html', this.getPageContent(), 'w');
-                                    fs.write(fname+'.gfjm.click', item, 'w');     //当前最新的已完成的click任务
+                    var out = '';
+                    var finished = false;
+                    subprocess.execFile("python", ["gfjm_main.py", fname], null, function(err, stdout, stderr) {
+                        out = stdout;
+                        finished = true;
+                    });
+
+                    this.waitFor(function check() {
+                        return finished;
+                    }, function then() {
+                        out = out.split('\r\n');
+                        var idx = 0;
+                        casper.each(out, function(self, item) {
+                            if (item.length > 0) {
+                                casper.then(function() {
+                                    idx += 1;
+                                    casper.echo('Click ' + item);
+                                    casper.click(x(item));
+                                    casper.waitForSelector('input#cmdBack', function() {
+                                        casper.capture(fname+'.'+parseInt(idx)+'.gfjm.click.png')
+                                        fs.write(fname+'.'+parseInt(idx)+'.gfjm.click.html', this.getPageContent(), 'w');
+                                        fs.write(fname+'.gfjm.click', item, 'w');     //当前最新的已完成的click任务
+                                    });
+                                    casper.back();
                                 });
-                                casper.back();
-                            });
-                        }
-                    });
-                    casper.then(function() {
-                        casper.echo('OK');
+                            }
+                        });
+                        casper.then(function() {
+                            casper.echo('OK');
+                        });
                     });
                 });
-            });
+            }
         });
     });
 

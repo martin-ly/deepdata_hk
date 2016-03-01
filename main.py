@@ -182,7 +182,7 @@ if __name__ == '__main__':
         sockm.send('', zmq.SNDMORE)
         sockm.send_pyobj(task)
 
-    queue, waitingps = [], []  #待分配任务，待机工作进程
+    queue, waitingps = [], []  #待机任务，待机进程
     while True:
         task = sockm.recv_multipart()
         subtask = cPickle.loads(task[-1])

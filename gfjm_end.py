@@ -6,8 +6,11 @@ from bs4 import BeautifulSoup
 def run(ctx, code, kwargs):
     code = kwargs['code']
     today = kwargs['today']
-    with open('%s/%s.gfjm.tmp' % (today, code), 'r') as fp:
-        main = fp.readlines()
+    try:
+        with open('%s/%s.gfjm.tmp' % (today, code), 'r') as fp:
+            main = fp.readlines()
+    except:
+        return
     main = [x.strip(' \t\r\n').split(';') for x in main]
 
     output, tmpfiles = [], []
@@ -34,4 +37,4 @@ def run(ctx, code, kwargs):
     ctx.onfinish(tmpfiles)
 
 if __name__ == '__main__':
-    run(None, '20160226/00007_gfjm.html', {'today' : '20160226'})
+    run(None, '20160226/90005_gfjm.html', {'today' : '20160226', 'code' : '90005'})
