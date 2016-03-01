@@ -134,11 +134,12 @@ class ContextJS:
 
 def spider_process():
     def addsubtask(task):
-        sockp.send('', zmq.SNDMORE)
         sockp.send_pyobj(task)
 
     sockp = zmq.Context().socket(zmq.DEALER)
+    sockp.setsockopt(zmq.IDENTITY, '%d' % os.getpid())
     sockp.connect(EndPoint)
+    addsubtask('checkin')
 
     while True:
         task = sockp.recv_multipart()[-1]
@@ -156,22 +157,32 @@ def spider_process():
         if ctx.retry and ctx.retry_count < retry_num:
             task[-1] = ctx.retry_count
             addsubtask(task)
-        addsubtask([ctx.name,])         #结束任务时给出任务名称，以便引擎正确判断任务是否结束
+        addsubtask(('finished', task))         #结束任务
+
+def OnNewTask(sockm, queue, waitingps, task):
+    try:
+        p = waitingps.pop(0)
+    except:
+        queue.append(task)
+    else:
+        sockm.send('%d' % p.pid, zmq.SNDMORE)
+        sockm.send_pyobj(task)
 
 if __name__ == '__main__':
-    ps, ts = [], {}
+    ps, ts = {}, {}
+    queue, waitingps = [], []  #待机任务，待机进程
     if not os.path.exists(today):
         os.mkdir(today)
     elif os.path.exists(failog):
         os.remove(failog)
 
-    sockm = zmq.Context().socket(zmq.DEALER)
+    sockm = zmq.Context().socket(zmq.ROUTER)
     sockm.bind(EndPoint)
 
     for x in xrange(process_num):
         p = Process(target = spider_process)
-        ps.append(p)
         p.start()
+        ps[p.pid] = p
 
     for name, task in init_tasks.items():
         if ts.has_key(name):
@@ -179,33 +190,56 @@ if __name__ == '__main__':
         else:
             ts[name] = {'count' : 1, 'start' : clock()}
         task += [name, 0]       #init_tasks里面是6元素元组，添加2元素
-        sockm.send('', zmq.SNDMORE)
-        sockm.send_pyobj(task)
+        OnNewTask(sockm, queue, waitingps, task)
 
-    queue, waitingps = [], []  #待机任务，待机进程
     while True:
-        task = sockm.recv_multipart()
-        subtask = cPickle.loads(task[-1])
-        if len(subtask) > 1:
-            name = subtask[-2]
+        pid, task = sockm.recv_multipart()
+        task = cPickle.loads(task)
+        if isinstance(task, str) and task == 'checkin':     #工作进程签到
+            try:
+                task = queue.pop(0)
+            except:
+                p = ps.get(int(pid), None)
+                if p:
+                    waitingps.append(p)
+            else:
+                sockm.send(pid, zmq.SNDMORE)
+                sockm.send_pyobj(task)
+
+        elif isinstance(task, list):                 #新的子任务
+            name = task[-2]
             ts[name]['count'] += 1
-#            queue.append(subtask)
-            sockm.send('', zmq.SNDMORE)
-            sockm.send_pyobj(subtask)
-        else:
-            name = subtask[0]
+            OnNewTask(sockm, queue, waitingps, task)
+
+        else:                       #子任务完成
+            try:
+                next_task = queue.pop(0)
+            except:
+                p = ps.get(int(pid), None)
+                if p:
+                    waitingps.append(p)
+            else:
+                sockm.send(pid, zmq.SNDMORE)
+                sockm.send_pyobj(next_task)
+
+            task = task[-1]
+            jsfile, _, kwargs, _, pyfile, _, name, _ = task
             ts[name]['count'] -= 1
-            if ts[name]['count'] == 0:
+            if ts[name]['count'] > 0:
+                with loglock:
+                    print '=== [%s:%s], args %s' % (jsfile, pyfile, str(kwargs))
+                    print '=== %s: %d task(s) left.\n' % (name, ts[name]['count'])
+            else:
                 elapse = clock() - ts[name]['start']
                 hours, minutes, seconds = elapse / 3600, (elapse % 3600) / 60, elapse % 60
                 with loglock:
                     print '========== FINISH: %s >>> %dh %dm %ds ==========' % (name, hours, minutes, seconds)
                 ts.pop(name)
                 if len(ts) == 0:
-                    for x in xrange(process_num):
-                        sockm.send('', zmq.SNDMORE)
+                    for pid, _ in ps.iteritems():
+                        sockm.send('%d' % pid, zmq.SNDMORE)
                         sockm.send_pyobj(None)
                     break
 
-    for p in ps:
+    for _, p in ps.iteritems():
         p.join()

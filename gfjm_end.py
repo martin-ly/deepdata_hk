@@ -10,7 +10,7 @@ def run(ctx, code, kwargs):
         with open('%s/%s.gfjm.tmp' % (today, code), 'r') as fp:
             main = fp.readlines()
     except:
-        return
+        main = []
     main = [x.strip(' \t\r\n').split(';') for x in main]
 
     output, tmpfiles = [], []
