@@ -49,11 +49,12 @@ casper.test.begin('股份解码'+param, 0, function suite(test) {
             fs.write(fname+'.gfjm.2.html', this.getPageContent(), 'w');
             if (casper.fetchText('span#lblRecCount') == '0') {
                 casper.then(function() {
-                    fs.remove(fname+'.gfjm.1.png');
-                    fs.remove(fname+'.gfjm.1.html');
-                    fs.remove(fname+'.gfjm.2.png');
-                    fs.remove(fname+'.gfjm.2.html');
-                    casper.echo('OK');
+//                    fs.remove(fname+'.gfjm.1.png');
+//                    fs.remove(fname+'.gfjm.1.html');
+//                    fs.remove(fname+'.gfjm.2.png');
+//                    fs.remove(fname+'.gfjm.2.html');
+//                    casper.echo('OK');
+                    casper.echo('No Record 1');
                 });
             }
             else {
@@ -63,13 +64,14 @@ casper.test.begin('股份解码'+param, 0, function suite(test) {
                     fs.write(fname+'.gfjm.3.html', this.getPageContent(), 'w');
                     if (casper.fetchText('span#lblRecCount') == '0') {
                         casper.then(function() {
-                            fs.remove(fname+'.gfjm.1.png');
-                            fs.remove(fname+'.gfjm.1.html');
-                            fs.remove(fname+'.gfjm.2.png');
-                            fs.remove(fname+'.gfjm.2.html');
-                            fs.remove(fname+'.gfjm.3.png');
-                            fs.remove(fname+'.gfjm.3.html');
-                            casper.echo('OK');
+//                            fs.remove(fname+'.gfjm.1.png');
+//                            fs.remove(fname+'.gfjm.1.html');
+//                            fs.remove(fname+'.gfjm.2.png');
+//                            fs.remove(fname+'.gfjm.2.html');
+//                            fs.remove(fname+'.gfjm.3.png');
+//                            fs.remove(fname+'.gfjm.3.html');
+//                            casper.echo('OK');
+                            casper.echo('No Record 2');
                         });
                     }
                     else {

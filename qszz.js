@@ -55,6 +55,9 @@ casper.test.begin('券商追踪'+param, 0, function suite(test) {
                     casper.echo('OK');
                 }
                 else {
+//                    fs.remove(fname+'_1.html');
+//                    fs.remove(fname+'_1.png');
+//                    casper.echo('OK');
                     casper.capture(fname+'_2.png');
                     fs.write(fname+'_2.html', this.getPageContent(), 'w');
                     casper.echo('Key Not Found');
