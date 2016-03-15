@@ -1,7 +1,9 @@
 #coding: utf8
 
-import re, deephk
+import re, deephk, opencc
 from bs4 import BeautifulSoup, NavigableString
+
+cc = opencc.OpenCC('zht2zhs.ini')
 
 def run(ctx, code, kwargs):
     code = kwargs['code']
@@ -18,35 +20,47 @@ def run(ctx, code, kwargs):
         fclick = '%s/%s.%d.gfjm.click.html' % (today, code, i+1)
         bs = BeautifulSoup(open(fclick), 'html5lib', from_encoding='utf8')
 
-        extra_elements = []
         #表格类型
         anchor = bs.find('span', id='lblCaption')
         if anchor is None:
             ctx.onerror('找不到定位点1[%s]' % fclick)
-            continue
+            x.append('None')
+            #continue
         s = ''.join([unicode(ss).strip(' \t\r\n') for ss in anchor.stripped_strings])
-        extra_elements.append(s.encode('utf8'))
+        x.append(s.encode('utf8'))
 
         #股份类别
         anchor = bs.find('span', id='lblDClass')
         if anchor is None:
             ctx.onerror('找不到定位点2[%s]' % fclick)
-            continue
+            x.append('None')
+            #continue
         s = ''.join([unicode(ss).strip(' \t\r\n') for ss in anchor.stripped_strings])
-        extra_elements.append(s.encode('utf8'))
+        if s == u'H股':
+            s = u'H Shares'
+        x.append(s.encode('utf8'))
 
         #英文名字
         anchor = bs.find('span', id='lblEngName')
         if anchor is None:
-            extra_elements.append('')
-        else:
+            result = re.search(r'(.+?)\((.+)\)', x[0])
+            if result is None:  #无英文名，表示该持股者原始名字是英文名，其繁体中文和简体中文字段全部填英文名
+                x.insert(1, x[0])
+                x.insert(2, x[0])
+            else:   #英文名和中文名混在一起的情况，原始格式为：繁体中文(英文)
+                x[0] = result.group(1)
+                sim_name = cc.convert(result.group(1).decode('utf8'))
+                x.insert(1, sim_name.encode('utf8'))
+                x.insert(2, result.group(2).encode('utf8'))
+        else:   #有英文名，表示其原始名字是繁体中文，第二个字段填简体中文，第三个字段填这里抓到的英文名
+            sim_name = cc.convert(x[0].decode('utf8'))
+            x.insert(1, sim_name.encode('utf8'))
             for e in anchor.parent.next_siblings:
                 if not isinstance(e, NavigableString):
                     s = ''.join([unicode(ss).strip(' \t\r\n') for ss in e.stripped_strings])
                     s = ' '.join(re.split(r'\(.*?\)', s)).strip(' \t\r\n')
-                    extra_elements.append(s.encode('utf8'))
+                    x.insert(2, s.encode('utf8'))
 
-        x += extra_elements
         output.append(x)
         tmpfiles.append(fclick)
         tmpfiles.append('%s/%s.%d.gfjm.click.png' % (today, code, i+1))
@@ -62,4 +76,4 @@ def run(ctx, code, kwargs):
         ctx.onfinish(tmpfiles)
 
 if __name__ == '__main__':
-    run(None, '20160310/00001_gfjm.html', {'today' : '20160310', 'code' : '00001'})
+    run(None, '20160311/00001_gfjm.html', {'today' : '20160311', 'code' : '03968'})

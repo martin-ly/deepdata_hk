@@ -20,7 +20,7 @@ def run(ctx, html, kwargs):
 #                continue
             ctx.addtask(['qszz.js', code + '_qszz.html', {'code' : code}, 30, 'qszz', '%s - 券商追踪' % name])
             ctx.addtask(['gfjm.js', code + '_gfjm.html', {'code' : code}, 600, 'gfjm_end', '%s - 股份解码' % name])
-            count += 1
+#            count += 1
 #            if count >= 1:
 #                break
     ctx.onfinish([html,])
