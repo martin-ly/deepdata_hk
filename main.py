@@ -106,9 +106,11 @@ class ContextJS:
         ### js执行完成，下面执行与js相关的py来解析网页 ###
         ### out: utf8编码 ###
 
-        #0-成功,1-失败,2-重试
+        #0-成功,1-失败,2-重试,3-不需要调用py
         if out[-1] == 'OK' or out[-2] == 'OK':
             ret = 0
+        elif out[-1] == 'PASS' or out[-2] == 'PASS':
+            ret = 3
         else:
             self.retry = True
             self.retry_count += 1
@@ -120,7 +122,7 @@ class ContextJS:
 
         if ret == 1:        #js执行失败，写入失败日志备查
             self.onerror(out.decode('utf8'))
-        elif ret == 2:      #重试
+        elif ret in [2, 3]: #重试 and 成功，但是不需要调用py
             print '%s' % out.decode('utf8')
         else:               #js执行成功，调用py
             print '%s' % out.decode('utf8')

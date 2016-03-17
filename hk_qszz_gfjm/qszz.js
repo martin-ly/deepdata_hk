@@ -60,7 +60,7 @@ casper.test.begin('券商追踪'+param, 0, function suite(test) {
                 else if (exists == 2) {
                     fs.remove(fname+'_1.html');
                     fs.remove(fname+'_1.png');
-                    casper.echo('OK');
+                    casper.echo('PASS');
                 }
                 else {
                     casper.capture(fname+'_2.png');
