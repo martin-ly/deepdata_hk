@@ -1,14 +1,14 @@
 #coding: utf8
 
 import re, sys, json, subprocess, time
-from bs4 import BeautifulSoup, NavigableString, UnicodeDammit
+from bs4 import BeautifulSoup, NavigableString
 
 def run(code):
     code = sys.argv[-1]
     bs = BeautifulSoup(open(code+'.gfjm.html'), 'html5lib', from_encoding='utf8')
     anchor = bs.find('tr', class_='boldtxtw')
     if anchor is None:
-        ctx.onerror('找不到定位点')
+        ctx.onerror(u'找不到定位点')
         return
 
     lastdate = 0
@@ -17,7 +17,7 @@ def run(code):
     while time.time() < deadline and p.poll() == None:
         time.sleep(0.01)
     if p.poll() == None:
-        print 'getdate超时'
+        print u'getdate超时'
         p.kill()
     else:
         out, _ = p.communicate()
@@ -41,7 +41,7 @@ def run(code):
                 #element_date = tds[idx].
                 date = ''.join([unicode(x).strip(' \t\r\n') for x in tds[idx].stripped_strings]).split('/')     #日/月/年
                 if len(date) != 3:
-                    ctx.onerror('日期格式错误%s' % str(date))
+                    ctx.onerror(u'日期格式错误%s' % str(date))
                     continue
                 date = '%04d%02d%02d' % (int(date[2]), int(date[1]), int(date[0]))
                 if int(date) > lastdate:
@@ -66,7 +66,7 @@ def run(code):
 
     #返回js的click元素的xpath表达式
     for item in items:
-        print '%s' % item
+        print '%s' % item.decode('utf8')
 
 if __name__ == '__main__':
     run(sys.argv[-1])

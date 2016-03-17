@@ -40,8 +40,11 @@ casper.test.begin('券商追踪'+param, 0, function suite(test) {
             if (this.getPageContent().search(/市場中介者\/願意披露的投資者戶口持有人的紀錄:/) != -1) {
                 exists = 1;
             }
-            else {
+            else if (this.getPageContent().search(/沒有找到紀錄/) != -1) {
                 exists = 2;
+            }
+            else {
+                exists = 3;
             }
         });
 
@@ -54,10 +57,12 @@ casper.test.begin('券商追踪'+param, 0, function suite(test) {
                     fs.remove(fname+'_1.png');
                     casper.echo('OK');
                 }
+                else if (exists == 2) {
+                    fs.remove(fname+'_1.html');
+                    fs.remove(fname+'_1.png');
+                    casper.echo('OK');
+                }
                 else {
-//                    fs.remove(fname+'_1.html');
-//                    fs.remove(fname+'_1.png');
-//                    casper.echo('OK');
                     casper.capture(fname+'_2.png');
                     fs.write(fname+'_2.html', this.getPageContent(), 'w');
                     casper.echo('Key Not Found');

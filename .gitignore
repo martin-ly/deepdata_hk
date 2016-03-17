@@ -61,4 +61,6 @@ target/
 #Ipython Notebook
 .ipynb_checkpoints
 
-原始资料
+原始资料/
+# 忽略所有子目录下的子目录
+*/*/

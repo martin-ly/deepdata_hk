@@ -22,7 +22,9 @@ def gethtml(url, timeflag, block):
     data, flag = [], False
     shares, amount = 0, []
     s = '\n'.join([s.strip() for s in pre.stripped_strings]).split('\n')
-    if s[0].find(u'之證券賣空成交量') != -1:
+    if s[0].find(u'收市後提供') != -1:
+        ctx.onerror('现在不提供%s%s賣空成交数据' % ('主板' if block == 1 else '创业板', '上午' if timeflag == 0 else '下午'))
+    elif s[0].find(u'之證券賣空成交量') != -1:
         for x in s:
             if x.find(u'非指定證券') != -1:
                 break

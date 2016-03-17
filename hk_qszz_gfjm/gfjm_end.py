@@ -5,6 +5,12 @@ from bs4 import BeautifulSoup, NavigableString
 
 cc = opencc.OpenCC('zht2zhs.ini')
 
+def issascii(s):
+    for c in s:
+        if ord(c) >= 128:
+            return False
+    return True
+
 def run(ctx, code, kwargs):
     code = kwargs['code']
     today = kwargs['today']
@@ -23,7 +29,7 @@ def run(ctx, code, kwargs):
         #表格类型
         anchor = bs.find('span', id='lblCaption')
         if anchor is None:
-            ctx.onerror('找不到定位点1[%s]' % fclick)
+            ctx.onerror(u'找不到定位点1[%s]' % fclick)
             x.append('None')
             #continue
         s = ''.join([unicode(ss).strip(' \t\r\n') for ss in anchor.stripped_strings])
@@ -32,7 +38,7 @@ def run(ctx, code, kwargs):
         #股份类别
         anchor = bs.find('span', id='lblDClass')
         if anchor is None:
-            ctx.onerror('找不到定位点2[%s]' % fclick)
+            ctx.onerror(u'找不到定位点2[%s]' % fclick)
             x.append('None')
             #continue
         s = ''.join([unicode(ss).strip(' \t\r\n') for ss in anchor.stripped_strings])
@@ -47,11 +53,26 @@ def run(ctx, code, kwargs):
             if result is None:  #无英文名，表示该持股者原始名字是英文名，其繁体中文和简体中文字段全部填英文名
                 x.insert(1, x[0])
                 x.insert(2, x[0])
-            else:   #英文名和中文名混在一起的情况，原始格式为：繁体中文(英文)
-                x[0] = result.group(1)
-                sim_name = cc.convert(result.group(1).decode('utf8'))
-                x.insert(1, sim_name.encode('utf8'))
-                x.insert(2, result.group(2).encode('utf8'))
+            else:   #英文名和中文名混在一起的情况
+                isp1eng = issascii(result.group(1))
+                isp2eng = issascii(result.group(2))
+                if isp1eng and isp2eng: #两部分都是英文
+                    x.insert(1, x[0])
+                    x.insert(2, x[0])
+                elif isp1eng and not isp2eng:   #第一部分是英文，第二部分是繁中
+                    x[0] = result.group(2)
+                    sname = cc.convert(result.group(2).decode('utf8'))
+                    x.insert(1, sname.encode('utf8'))
+                    x.insert(2, result.group(1).encode('utf8'))
+                elif isp2eng and not isp1eng:   #第一部分是繁中，第二部分是英文
+                    x[0] = result.group(1)
+                    sname = cc.convert(result.group(1).decode('utf8'))
+                    x.insert(1, sname.encode('utf8'))
+                    x.insert(2, result.group(2).encode('utf8'))
+                else:   #两部分都是繁中
+                    sname = cc.convert(x[0].decode('utf8'))
+                    x.insert(1, sname.encode('utf8'))
+                    x.insert(2, '')
         else:   #有英文名，表示其原始名字是繁体中文，第二个字段填简体中文，第三个字段填这里抓到的英文名
             sim_name = cc.convert(x[0].decode('utf8'))
             x.insert(1, sim_name.encode('utf8'))
@@ -65,7 +86,7 @@ def run(ctx, code, kwargs):
         tmpfiles.append(fclick)
         tmpfiles.append('%s/%s.%d.gfjm.click.png' % (today, code, i+1))
 
-    print '解析 %d 条数据' % len(output)
+    print u'解析 %d 条数据' % len(output)
     deephk.save_gfjm(today, code, output)
     tmpfiles.append('%s/%s.gfjm.tmp' % (today, code))
     tmpfiles.append('%s/%s.gfjm.click' % (today, code))

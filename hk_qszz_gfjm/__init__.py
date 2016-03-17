@@ -16,4 +16,4 @@ jstimeout = 30
 output = 'stocklist.html'
 params = {}
 pymodname = 'parse_stocklist'
-description = '获取当日全部港股代码'
+description = u'获取当日全部港股代码'

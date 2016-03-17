@@ -1,6 +1,7 @@
 #coding: utf8
 
 import hkscc_participants
+import check_participant
 import time, os
 
 today = time.strftime('%Y%m%d')
@@ -13,4 +14,4 @@ jstimeout = 30
 output = None
 params = {}
 pymodname = 'hkscc_participants'
-description = '港股结算参与者'
+description = u'港股结算参与者'

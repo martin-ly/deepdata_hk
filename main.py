@@ -30,16 +30,19 @@ class ContextJS:
         self.cb, self.error, self.subtasks = cb, False, []
 
     def onerror(self, msg):
+        '''
+        msg: 接收unicode编码
+        '''
         self.error = True
         try:
-            print msg
-        except Exception, e:
-            msg = '*****************************************\n' + msg + '\n*****************************************'
+            print msg.encode(terminal_charset, 'xmlcharrefreplace')
+        except:
+            msg = '>>>>>\n\n' + traceback.format_exc() + '\n<<<<<\n'
             print msg
         with loglock:
             with open(failog, 'a+') as flog:
-                flog.write('>>>>>[%d] %s %s\n' % (int(self.retry_count), self.comment, self.jsfile if self._runjs else self.pyfile + '.py'))
-                flog.write(msg + '\n')
+                flog.write('>>>>>[%d] %s %s\n' % (int(self.retry_count), self.comment.encode('utf8'), self.jsfile if self._runjs else self.pyfile + '.py'))
+                flog.write(msg.encode('utf8') + '\n')
 
     def onfinish(self, files):
         '''删除子任务产生的临时文件'''
@@ -60,11 +63,13 @@ class ContextJS:
             subtask += [self.name, 0]       #py文件返回6元素元组，需要添加2元素
             self.cb(subtask)
         else:
-            print '子任务非法：', subtask
+            print u'子任务非法：', subtask
 
     def runjs(self, task):
-        self.stdout = StringIO.StringIO()
-        self.oldstdout, sys.stdout = sys.stdout, self.stdout
+        if not DEBUG:
+            self.stdout = StringIO.StringIO()
+            self.oldstdout, sys.stdout = sys.stdout, self.stdout
+
         self.jsfile, output, kwargs, jstimeout, self.pyfile, self.comment, self.name, self.retry_count = task
         kwargs['today'] = today
         self._runjs = True
@@ -72,12 +77,15 @@ class ContextJS:
         print '>>>>>[%d]' % (int(self.retry_count)+1,), self.comment, self.jsfile
 
         out, self.retry = ['OK',], False
+
+        ### 执行js脚本 ###
+
         if self.jsfile is not None:
             if not os.path.exists('./' + self.jsfile):
                 self.onerror(u'脚本%s不存在' % self.jsfile)
                 return
 
-            command = ['casperjs', 'test', './' + self.jsfile, '--output=%s' % self.htmlfile] + ['--%s=%s' % (k, v) for k, v in kwargs.items()]
+            command = ['casperjs', 'test', './' + self.jsfile, '--output=%s' % self.htmlfile] + ['--%s="%s"' % (k, v) for k, v in kwargs.items()]
             command_str = '\t' + ' '.join(command) + '\n'
 
             p = subprocess.Popen(command, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
@@ -85,7 +93,7 @@ class ContextJS:
             while time.time() < deadline and p.poll() == None:
                 time.sleep(0.01)
             if p.poll() == None:
-                print '超时'
+                print u'超时'
                 p.kill()
 
             out, _ = p.communicate()
@@ -94,6 +102,9 @@ class ContextJS:
             if len(out) == 1:
                 out.append('未知执行结果，按失败处理')
             out = [l.strip() for l in out if len(l.strip()) > 0]
+
+        ### js执行完成，下面执行与js相关的py来解析网页 ###
+        ### out: utf8编码 ###
 
         #0-成功,1-失败,2-重试
         if out[-1] == 'OK' or out[-2] == 'OK':
@@ -108,25 +119,25 @@ class ContextJS:
         out = '\n'.join(out)
 
         if ret == 1:        #js执行失败，写入失败日志备查
-            self.onerror(out)
+            self.onerror(out.decode('utf8'))
         elif ret == 2:      #重试
-            print '%s' % out
+            print '%s' % out.decode('utf8')
         else:               #js执行成功，调用py
-            print '%s' % out
+            print '%s' % out.decode('utf8')
             self._runjs = False
             mod = getattr(self.pkgmod, self.pyfile, None)
             if mod is None:
-                self.onerror('Module: %s not found in Package: %s' % (self.pyfile, self.pkgmod.__name__))
+                self.onerror(u'Module: %s not found in Package: %s' % (self.pyfile, self.pkgmod.__name__))
             else:
                 run = getattr(mod, 'run', None)
                 if run is None:
-                    self.onerror('模块中找不到run方法')
+                    self.onerror(u'模块中找不到run方法')
                 else:
                     try:
                         run(self, '%s/%s' % (today, output), kwargs)
                     except:
                         ret = traceback.format_exc()
-                        self.onerror(ret)
+                        self.onerror(ret.decode('utf8'))
 
 def spider_process():
     def addsubtask(task):
@@ -153,12 +164,14 @@ def spider_process():
 
         ctx = ContextJS(pkgname, addsubtask)
         ctx.runjs(task)
-        sys.stdout = ctx.oldstdout
-        with loglock:
-            try:
-                print ctx.stdout.getvalue().decode('utf8')
-            except Exception, e:
-                print '*****************************************\n'
+        if not DEBUG:
+            sys.stdout = ctx.oldstdout
+            with loglock:
+                try:
+                    print ctx.stdout.getvalue().encode(terminal_charset, 'xmlcharrefreplace')
+                except:
+                    msg = '>>>>>\n\n' + traceback.format_exc() + '\n<<<<<\n'
+                    print msg
         if ctx.retry and ctx.retry_count < retry_num:
             task[-1] = ctx.retry_count
             addsubtask(task)
@@ -192,6 +205,9 @@ if __name__ == '__main__':
 
     sockm = zmq.Context().socket(zmq.ROUTER)
     sockm.bind(EndPoint)
+
+    if DEBUG:
+        process_num = 1
 
     for x in xrange(process_num):
         p = Process(target = spider_process)

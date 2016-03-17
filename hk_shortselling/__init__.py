@@ -13,4 +13,4 @@ jstimeout = 30
 output = None
 params = {}
 pymodname = 'shortselling'
-description = '港股市场沽空'
+description = u'港股市场沽空'
