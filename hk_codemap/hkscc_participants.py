@@ -10,7 +10,10 @@ fname = 'List_of_Current_HKSCC_Participants.CSV'
 def server(day):
     total = 0
     s = zmq.Context().socket(zmq.REP)
-    s.bind(EndPoint)
+    try:
+        s.bind(EndPoint)
+    except:
+        return
 
     cc = opencc.OpenCC('zht2zhs.ini')
 

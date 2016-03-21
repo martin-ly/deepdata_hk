@@ -12,7 +12,7 @@ def run(code):
         return
 
     lastdate = 0
-    p = subprocess.Popen(['getdate.exe', code], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    p = subprocess.Popen(['getdate.exe', '-s', code], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     deadline = time.time() + 10
     while time.time() < deadline and p.poll() == None:
         time.sleep(0.01)

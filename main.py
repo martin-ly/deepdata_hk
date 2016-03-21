@@ -163,6 +163,8 @@ class ContextJS:
                     try:
                         run(self, '%s/%s' % (today, output), kwargs)
                     except:
+                        self.retry = True
+                        self.retry_count += 1
                         ret = traceback.format_exc()
                         self.onerror(ret.decode('utf8'))
             self.safe_print('55555555555555555\n')
@@ -346,7 +348,7 @@ if __name__ == '__main__':
                         with open(failog, 'a+') as flog:
                             flog.write('command = %s\nout = %s\n%s' % (command, unicode(out).encode('utf8'), traceback.format_exc()))
                     else:
-                        t = Thread(target = OnTaskFinished, args = (cmd, ts[name]['finaltimeout'], ts[name]['finalencoding']))
+                        t = Thread(target = OnTaskFinished, args = (cmd, ts[name]['final_timeout'], ts[name]['finalencoding']))
                         finishts.append(t)
                         t.Start()
 
