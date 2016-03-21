@@ -2,6 +2,7 @@
 
 import re, deephk, opencc
 from bs4 import BeautifulSoup, NavigableString
+from main import OUTPUT
 
 cc = opencc.OpenCC('zht2zhs.ini')
 
@@ -14,6 +15,8 @@ def issascii(s):
 def run(ctx, code, kwargs):
     code = kwargs['code']
     today = kwargs['today']
+    folder = os.path.join(os.path.dirname(__file__), kwargs['today'])
+
     try:
         with open('%s/%s.gfjm.tmp' % (today, code), 'r') as fp:
             main = fp.readlines()
@@ -95,6 +98,7 @@ def run(ctx, code, kwargs):
     tmpfiles.append('%s/%s.gfjm.png' % (today, code))
     if ctx:
         ctx.onfinish(tmpfiles)
+        ctx.set_output(OUTPUT.FOLDER, folder)
 
 if __name__ == '__main__':
     run(None, '20160311/00001_gfjm.html', {'today' : '20160311', 'code' : '03968'})

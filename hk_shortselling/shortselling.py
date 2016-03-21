@@ -3,6 +3,7 @@
 import re, urllib2
 from threading import Thread
 from bs4 import BeautifulSoup
+from main import OUTPUT
 
 today = None
 
@@ -53,6 +54,8 @@ def gethtml(url, timeflag, block):
 def run(ctx, html, kwargs):
     global today
     today = kwargs['today']
+    folder = os.path.join(os.path.dirname(__file__), kwargs['today'])
+
     p1 = Thread(target = gethtml, args = ('http://www.hkex.com.hk/chi/stat/smstat/ssturnover/ncms/MSHTMAIN_C.HTM', 0, 1))
     p2 = Thread(target = gethtml, args = ('http://www.hkex.com.hk/chi/stat/smstat/ssturnover/ncms/MSHTGEM_C.HTM', 0, 0))
     p3 = Thread(target = gethtml, args = ('http://www.hkex.com.hk/chi/stat/smstat/ssturnover/ncms/ASHTMAIN_C.HTM', 1, 1))
@@ -65,6 +68,7 @@ def run(ctx, html, kwargs):
     p2.join()
     p3.join()
     p4.join()
+    ctx.set_output(OUTPUT.FOLDER, folder)
 
 if __name__ == '__main__':
     run(None, None, {'today' : '20160315'})

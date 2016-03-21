@@ -16,6 +16,7 @@ ctx.runjs可以从py脚本中调用js脚本继续抓取工作。
 
 import subprocess, time, os, sys, traceback, zmq, cPickle, StringIO
 from time import clock
+from threading import Thread
 from multiprocessing import Process, Lock
 from settings import *
 
@@ -24,10 +25,19 @@ failog = os.getcwd() + '/log/%s.log' % today
 loglock = Lock()
 EndPoint = 'tcp://127.0.0.1:9066'
 
+def enum(**enums):
+    return type('Enum', (), enums)
+
+OUTPUT = enum(
+    FOLDER = 0,      # 输出目录绝对路径
+    FILE = 1         # 输出文件绝对路径
+)
+
 class ContextJS:
     def __init__(self, pkgname, cb):
         self.pkgmod = __import__(pkgname)
         self.cb, self.error, self.subtasks = cb, False, []
+        self.output = {}
 
     def onerror(self, msg):
         '''
@@ -50,6 +60,9 @@ class ContextJS:
             if os.path.exists(f):
                 os.remove(f)
 
+    def set_output(self, k, v):
+        self.output[k] = v
+
     def addtask(self, subtask):
         '''动态添加子任务需要遵照 [jsfile, output, params, jstimeout, pymodname, comment] 格式
         jsfile: js文件名，包含扩展名
@@ -65,10 +78,16 @@ class ContextJS:
         else:
             print u'子任务非法：', subtask
 
+    def safe_print(self, msg):
+        with loglock:
+            print >> self.oldstdout, msg
+
     def runjs(self, task):
         if not DEBUG:
             self.stdout = StringIO.StringIO()
             self.oldstdout, sys.stdout = sys.stdout, self.stdout
+        else:
+            self.oldstdout = sys.stdout
 
         self.jsfile, output, kwargs, jstimeout, self.pyfile, self.comment, self.name, self.retry_count = task
         kwargs['today'] = today
@@ -93,8 +112,9 @@ class ContextJS:
             while time.time() < deadline and p.poll() == None:
                 time.sleep(0.01)
             if p.poll() == None:
-                print u'超时'
+                self.safe_print(u'超时')
                 p.kill()
+                self.safe_print('killed')
 
             out, _ = p.communicate()
             out = command_str + out
@@ -120,6 +140,8 @@ class ContextJS:
                 ret = 1
         out = '\n'.join(out)
 
+        self.safe_print('111111111111111111: %d\n' % ret)
+
         if ret == 1:        #js执行失败，写入失败日志备查
             self.onerror(out.decode('utf8'))
         elif ret in [2, 3]: #重试 and 成功，但是不需要调用py
@@ -128,9 +150,12 @@ class ContextJS:
             print '%s' % out.decode('utf8')
             self._runjs = False
             mod = getattr(self.pkgmod, self.pyfile, None)
+            self.safe_print('222222222222222\n')
             if mod is None:
+                self.safe_print('3333333333333333333\n')
                 self.onerror(u'Module: %s not found in Package: %s' % (self.pyfile, self.pkgmod.__name__))
             else:
+                self.safe_print('4444444444444444444\n')
                 run = getattr(mod, 'run', None)
                 if run is None:
                     self.onerror(u'模块中找不到run方法')
@@ -140,6 +165,8 @@ class ContextJS:
                     except:
                         ret = traceback.format_exc()
                         self.onerror(ret.decode('utf8'))
+            self.safe_print('55555555555555555\n')
+        self.safe_print('66666666666666666666\n')
 
 def spider_process():
     def addsubtask(task):
@@ -174,12 +201,14 @@ def spider_process():
                 except:
                     msg = '>>>>>\n\n' + traceback.format_exc() + '\n<<<<<\n'
                     print msg
+        ctx.safe_print('777777777777777777777777\n')
         if ctx.retry and ctx.retry_count < retry_num:
             task[-1] = ctx.retry_count
             addsubtask(task)
         if len(task) == 8:
             task.append(pkgname)
-        addsubtask(('finished', task))         #结束任务
+        addsubtask(('finished', task, ctx.output))         #结束任务
+        ctx.safe_print('88888888888888888888\n')
 
 def OnNewTask(sockm, queue, waitingps, task):
     try:
@@ -189,6 +218,29 @@ def OnNewTask(sockm, queue, waitingps, task):
     else:
         sockm.send('%d' % p.pid, zmq.SNDMORE)
         sockm.send_pyobj(task)
+
+def OnTaskFinished(cmd, timeout, encoding):
+    ''' 后置任务
+    cmd: __init__.py中预置的finalinvoke
+    timeout: __init__.py中预置的finaltimeout
+    encoding: __init__.py中预置的finalencoding
+    '''
+    begin = clock()
+    p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    deadline = time.time() + timeout
+    while time.time() < deadline and p.poll() == None:
+        time.sleep(0.01)
+    if p.poll() == None:
+        self.safe_print(u'超时')
+        p.kill()
+        self.safe_print('killed')
+    out, _ = p.communicate()
+
+    msg = '\n%s\n%s\nExecuted Time = %.2f Seconds.\n' % (cmd, out.decode(encoding), clock() - begin)
+    with loglock:
+        print msg
+    with open(failog, 'a+') as flog:
+        flog.write(msg.encode('utf8'))
 
 if __name__ == '__main__':
     runmode = 0         #不带参数，表示按照settings.py里面定义来运行
@@ -202,7 +254,7 @@ if __name__ == '__main__':
     if not os.path.exists('log'):
         os.mkdir('log')
 
-    ps, ts = {}, {}
+    ps, ts, finishts = {}, {}, []
     queue, waitingps = [], []  #待机任务，待机进程
 
     sockm = zmq.Context().socket(zmq.ROUTER)
@@ -232,6 +284,9 @@ if __name__ == '__main__':
 
         _mod = __import__(pkgname)
         task = [_mod.jsfile, _mod.output, _mod.params, _mod.jstimeout, _mod.pymodname, _mod.description, name, 0, pkgname]
+        ts[name]['final_invoke'] = getattr(_mod, 'finalinvoke', None)
+        ts[name]['final_timeout'] = getattr(_mod, 'finaltimeout', 60)
+        ts[name]['finalencoding'] = getattr(_mod, 'finalencoding', 'utf8')
         with open(failog, 'a+') as flog:
             flog.write('======= Task %s Begin at %s =======\n' % (name.encode('utf8'), time.strftime('%H:%M:%S')))
         OnNewTask(sockm, queue, waitingps, task)
@@ -256,6 +311,7 @@ if __name__ == '__main__':
             OnNewTask(sockm, queue, waitingps, task)
 
         else:                       #子任务完成
+            word, t, out = task
             try:
                 next_task = queue.pop(0)
             except:
@@ -266,8 +322,7 @@ if __name__ == '__main__':
                 sockm.send(pid, zmq.SNDMORE)
                 sockm.send_pyobj(next_task)
 
-            task = task[-1]
-            jsfile, _, kwargs, _, pyfile, _, name, _, pkgname = task
+            jsfile, _, kwargs, _, pyfile, _, name, _, pkgname = t
             ts[name]['count'] -= 1
             if ts[name]['count'] > 0:
                 with loglock:
@@ -280,6 +335,21 @@ if __name__ == '__main__':
                     print '========== FINISH: %s >>> %dh %dm %ds ==========' % (name, hours, minutes, seconds)
                 with open(failog, 'a+') as flog:
                     flog.write('========== FINISH: %s >>> %dh %dm %ds ==========\n' % (name.encode('utf8'), hours, minutes, seconds))
+
+                if ts[name]['final_invoke']:
+                    command = ts[name]['final_invoke']
+                    try:
+                        cmd = filter(lambda x: unicode(out[x]) if isinstance(x, int) else x, command)
+                    except:
+                        with loglock:
+                            print traceback.format_exc()
+                        with open(failog, 'a+') as flog:
+                            flog.write('command = %s\nout = %s\n%s' % (command, unicode(out).encode('utf8'), traceback.format_exc()))
+                    else:
+                        t = Thread(target = OnTaskFinished, args = (cmd, ts[name]['finaltimeout'], ts[name]['finalencoding']))
+                        finishts.append(t)
+                        t.Start()
+
                 ts.pop(name)
                 if len(ts) == 0:
                     for pid, _ in ps.iteritems():
@@ -289,3 +359,6 @@ if __name__ == '__main__':
 
     for _, p in ps.iteritems():
         p.join()
+
+    for t in finishts:
+        t.join()

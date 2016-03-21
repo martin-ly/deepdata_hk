@@ -19,7 +19,7 @@ def server(day):
         if isinstance(obj, int):
             total += obj
         elif isinstance(obj, dict):
-            obj['sname'] = cc.convert(obj['tname'].decode('utf8'))
+            obj['sname'] = cc.convert(obj['tname'].decode('utf8')).encode('utf8')
             with open('%s/codemap' % day, 'a+') as fp:
                 fp.write(';'.join([obj['code'], obj['ename'], obj['tname'], obj['sname'], obj['addr'], obj['tel'], obj['fax'], obj['website'], obj['brokerno']]) + '\n')
             total -= 1

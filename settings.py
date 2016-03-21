@@ -17,7 +17,7 @@ init_tasks = {
     1 : {
         'description' : u'港股.券商追踪.股份解码',
         'package' : 'hk_qszz_gfjm',
-        'enable' : True,
+        'enable' : False,
     },
 
     2 : {
