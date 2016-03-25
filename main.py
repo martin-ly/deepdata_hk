@@ -20,6 +20,8 @@ from threading import Thread
 from multiprocessing import Process, Lock
 from settings import *
 
+ThreadStop = Thread._Thread__stop
+
 today = time.strftime('%Y%m%d')
 failog = os.getcwd() + '/log/%s.log' % today
 loglock = Lock()
@@ -33,26 +35,31 @@ OUTPUT = enum(
     FILE = 1         # 输出文件绝对路径
 )
 
-class ContextJS:
-    def __init__(self, pkgname, cb):
+class ContextJS(Thread):
+    def __init__(self, pkgname, cb, task):
+        Thread.__init__(self)
         self.pkgmod = __import__(pkgname)
         self.cb, self.error, self.subtasks = cb, False, []
         self.output = {}
+        self.task = task
 
-    def onerror(self, msg):
+    def onerror(self, msg, err = True):
         '''
         msg: 接收unicode编码
         '''
-        self.error = True
+        self.error = err
         try:
-            print msg.encode(terminal_charset, 'xmlcharrefreplace')
-        except:
-            msg = '>>>>>\n\n' + traceback.format_exc() + '\n<<<<<\n'
+            #print msg.encode(terminal_charset, 'xmlcharrefreplace')
             print msg
-        with loglock:
-            with open(failog, 'a+') as flog:
-                flog.write('>>>>>[%d] %s %s\n' % (int(self.retry_count), self.comment.encode('utf8'), self.jsfile if self._runjs else self.pyfile + '.py'))
-                flog.write(msg.encode('utf8') + '\n')
+        except:
+            msg = '+++++\n\n' + traceback.format_exc() + '\n+++++\n'
+            print msg
+
+        if err or DEBUG:
+            with loglock:
+                with open(failog, 'a+') as flog:
+                    flog.write('>>>>> [%d] %s %s\n' % (int(self.retry_count), self.comment.encode('utf8'), self.jsfile if self._runjs else self.pyfile + '.py'))
+                    flog.write(msg.encode('utf8') + '\n')
 
     def onfinish(self, files):
         '''删除子任务产生的临时文件'''
@@ -73,7 +80,7 @@ class ContextJS:
         comment: 任务说明，显示用
         '''
         if isinstance(subtask, list) and len(subtask) == 6:
-            subtask += [self.name, 0]       #py文件返回6元素元组，需要添加2元素
+            subtask += [self.bbname, 0]       #py文件返回6元素元组，需要添加2元素
             self.cb(subtask)
         else:
             print u'子任务非法：', subtask
@@ -82,19 +89,24 @@ class ContextJS:
         with loglock:
             print >> self.oldstdout, msg
 
-    def runjs(self, task):
-        if not DEBUG:
-            self.stdout = StringIO.StringIO()
-            self.oldstdout, sys.stdout = sys.stdout, self.stdout
-        else:
-            self.oldstdout = sys.stdout
+    def _stop(self):
+        if self.isAlive():
+            ThreadStop(self)
 
-        self.jsfile, output, kwargs, jstimeout, self.pyfile, self.comment, self.name, self.retry_count = task
-        kwargs['today'] = today
+    def run(self):
         self._runjs = True
-        self.htmlfile = '%s/%s' % (today, output)
-        print '>>>>>[%d]' % (int(self.retry_count)+1,), self.comment, self.jsfile
+        self.jsfile, output, kwargs, jstimeout, self.pyfile, self.comment, self.bbname, self.retry_count = self.task
+        kwargs['today'] = today
+        if DEBUG:
+            self.onerror(u'[%d] Thread begin: %s, params = %s' % (os.getpid(), self.jsfile, kwargs), False)
 
+#        if not DEBUG:
+        self.stdout = StringIO.StringIO()
+        self.oldstdout, sys.stdout = sys.stdout, self.stdout
+#        else:
+#            self.oldstdout = sys.stdout
+
+        self.htmlfile = '%s/%s' % (today, output)
         out, self.retry = ['OK',], False
 
         ### 执行js脚本 ###
@@ -112,9 +124,8 @@ class ContextJS:
             while time.time() < deadline and p.poll() == None:
                 time.sleep(0.01)
             if p.poll() == None:
-                self.safe_print(u'超时')
                 p.kill()
-                self.safe_print('killed')
+                self.safe_print(u'超时')
 
             out, _ = p.communicate()
             out = command_str + out
@@ -140,22 +151,19 @@ class ContextJS:
                 ret = 1
         out = '\n'.join(out)
 
-        self.safe_print('111111111111111111: %d\n' % ret)
-
         if ret == 1:        #js执行失败，写入失败日志备查
             self.onerror(out.decode('utf8'))
+
         elif ret in [2, 3]: #重试 and 成功，但是不需要调用py
-            print '%s' % out.decode('utf8')
+            self.onerror(out.decode('utf8'), False)
+
         else:               #js执行成功，调用py
-            print '%s' % out.decode('utf8')
+            self.onerror(out.decode('utf8'), False)
             self._runjs = False
             mod = getattr(self.pkgmod, self.pyfile, None)
-            self.safe_print('222222222222222\n')
             if mod is None:
-                self.safe_print('3333333333333333333\n')
                 self.onerror(u'Module: %s not found in Package: %s' % (self.pyfile, self.pkgmod.__name__))
             else:
-                self.safe_print('4444444444444444444\n')
                 run = getattr(mod, 'run', None)
                 if run is None:
                     self.onerror(u'模块中找不到run方法')
@@ -167,8 +175,6 @@ class ContextJS:
                         self.retry_count += 1
                         ret = traceback.format_exc()
                         self.onerror(ret.decode('utf8'))
-            self.safe_print('55555555555555555\n')
-        self.safe_print('66666666666666666666\n')
 
 def spider_process():
     def addsubtask(task):
@@ -182,35 +188,36 @@ def spider_process():
     sockp.connect(EndPoint)
     addsubtask('checkin')
 
-    while True:
+    while 1:
         os.chdir(orign_path)
         task = sockp.recv_multipart()[-1]
         task = cPickle.loads(task)      #接收9元素元组
-        if task is None:
-            break
 
         pkgname = task[-1]
         os.chdir(pkgname)
         task = task[:-1]
 
-        ctx = ContextJS(pkgname, addsubtask)
-        ctx.runjs(task)
-        if not DEBUG:
-            sys.stdout = ctx.oldstdout
-            with loglock:
-                try:
-                    print ctx.stdout.getvalue().encode(terminal_charset, 'xmlcharrefreplace')
-                except:
-                    msg = '>>>>>\n\n' + traceback.format_exc() + '\n<<<<<\n'
-                    print msg
-        ctx.safe_print('777777777777777777777777\n')
+        ctx = ContextJS(pkgname, addsubtask, task)
+        ctx.start()
+        ctx.join(task[3])
+
+        if ctx.isAlive():
+            ctx._stop()
+            ctx.onerror(u'任务超时')
+
+        sys.stdout = ctx.oldstdout
+        with loglock:
+            try:
+                print ctx.stdout.getvalue().encode(terminal_charset, 'xmlcharrefreplace')
+            except:
+                msg = '+++++\n\n' + traceback.format_exc() + '\n+++++\n'
+                print msg
         if ctx.retry and ctx.retry_count < retry_num:
             task[-1] = ctx.retry_count
             addsubtask(task)
         if len(task) == 8:
             task.append(pkgname)
         addsubtask(('finished', task, ctx.output))         #结束任务
-        ctx.safe_print('88888888888888888888\n')
 
 def OnNewTask(sockm, queue, waitingps, task):
     try:
@@ -235,14 +242,13 @@ def OnTaskFinished(cmd, timeout, encoding):
     if p.poll() == None:
         self.safe_print(u'超时')
         p.kill()
-        self.safe_print('killed')
     out, _ = p.communicate()
 
     msg = '\n%s\n%s\nExecuted Time = %.2f Seconds.\n' % (cmd, out.decode(encoding), clock() - begin)
     with loglock:
         print msg
-    with open(failog, 'a+') as flog:
-        flog.write(msg.encode('utf8'))
+        with open(failog, 'a+') as flog:
+            flog.write(msg.encode('utf8'))
 
 if __name__ == '__main__':
     runmode = 0         #不带参数，表示按照settings.py里面定义来运行
@@ -261,9 +267,6 @@ if __name__ == '__main__':
 
     sockm = zmq.Context().socket(zmq.ROUTER)
     sockm.bind(EndPoint)
-
-    if DEBUG:
-        process_num = 1
 
     for x in xrange(process_num):
         p = Process(target = spider_process)
@@ -289,11 +292,12 @@ if __name__ == '__main__':
         ts[name]['final_invoke'] = getattr(_mod, 'finalinvoke', None)
         ts[name]['final_timeout'] = getattr(_mod, 'finaltimeout', 60)
         ts[name]['finalencoding'] = getattr(_mod, 'finalencoding', 'utf8')
-        with open(failog, 'a+') as flog:
-            flog.write('======= Task %s Begin at %s =======\n' % (name.encode('utf8'), time.strftime('%H:%M:%S')))
+        with loglock:
+            with open(failog, 'a+') as flog:
+                flog.write('===== Task %s Begin at %s =====\n' % (name.encode('utf8'), time.strftime('%H:%M:%S')))
         OnNewTask(sockm, queue, waitingps, task)
 
-    while True:
+    while 1:
         pid, task = sockm.recv_multipart()
         task = cPickle.loads(task)
         if isinstance(task, str) and task == 'checkin':     #工作进程签到
@@ -335,32 +339,29 @@ if __name__ == '__main__':
                 hours, minutes, seconds = elapse / 3600, (elapse % 3600) / 60, elapse % 60
                 with loglock:
                     print '========== FINISH: %s >>> %dh %dm %ds ==========' % (name, hours, minutes, seconds)
-                with open(failog, 'a+') as flog:
-                    flog.write('========== FINISH: %s >>> %dh %dm %ds ==========\n' % (name.encode('utf8'), hours, minutes, seconds))
+                    with open(failog, 'a+') as flog:
+                        flog.write('========== FINISH: %s >>> %dh %dm %ds ==========\n' % (name.encode('utf8'), hours, minutes, seconds))
 
                 if ts[name]['final_invoke']:
                     command = ts[name]['final_invoke']
                     try:
-                        cmd = filter(lambda x: unicode(out[x]) if isinstance(x, int) else x, command)
+                        cmd = map(lambda x: unicode(out[x]) if isinstance(x, int) else x, command)
                     except:
                         with loglock:
                             print traceback.format_exc()
-                        with open(failog, 'a+') as flog:
-                            flog.write('command = %s\nout = %s\n%s' % (command, unicode(out).encode('utf8'), traceback.format_exc()))
+                            with open(failog, 'a+') as flog:
+                                flog.write('command = %s\nout = %s\n%s' % (command, unicode(out).encode('utf8'), traceback.format_exc()))
                     else:
                         t = Thread(target = OnTaskFinished, args = (cmd, ts[name]['final_timeout'], ts[name]['finalencoding']))
                         finishts.append(t)
-                        t.Start()
+                        t.start()
 
                 ts.pop(name)
                 if len(ts) == 0:
-                    for pid, _ in ps.iteritems():
-                        sockm.send('%d' % pid, zmq.SNDMORE)
-                        sockm.send_pyobj(None)
                     break
 
     for _, p in ps.iteritems():
-        p.join()
+        p.terminate()
 
     for t in finishts:
         t.join()

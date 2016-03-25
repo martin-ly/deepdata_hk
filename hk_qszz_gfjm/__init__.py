@@ -18,6 +18,6 @@ output = 'stocklist.html'
 params = {}
 pymodname = 'parse_stocklist'
 description = u'获取当日全部港股代码'
-finalinvoke = ['DeepSecurityMaster.exe', '-d', OUTPUT.FOLDER, '-t', '0x01']
+finalinvoke = ['hkexe/DeepSecurityMaster.exe', '-d', OUTPUT.FOLDER, '-t', '0x01']
 finaltimeout = 3600
 finalencoding = 'gbk'

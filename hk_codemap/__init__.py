@@ -16,6 +16,6 @@ output = None
 params = {}
 pymodname = 'hkscc_participants'
 description = u'港股结算参与者'
-finalinvoke = ['DeepSecurityMaster.exe', '-d', OUTPUT.FOLDER, '-t', '0x08']
+finalinvoke = ['hkexe/DeepSecurityMaster.exe', '-d', OUTPUT.FOLDER, '-t', '0x08']
 finaltimeout = 60
 finalencoding = 'gbk'

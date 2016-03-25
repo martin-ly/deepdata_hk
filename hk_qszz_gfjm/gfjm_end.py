@@ -1,6 +1,6 @@
 #coding: utf8
 
-import re, deephk, opencc
+import os, re, deephk, opencc
 from bs4 import BeautifulSoup, NavigableString
 from main import OUTPUT
 

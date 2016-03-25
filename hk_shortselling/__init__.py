@@ -15,6 +15,6 @@ output = None
 params = {}
 pymodname = 'shortselling'
 description = u'港股市场沽空'
-finalinvoke = ['DeepSecurityMaster.exe', '-d', OUTPUT.FOLDER, '-t', '0x04']
+finalinvoke = ['hkexe/DeepSecurityMaster.exe', '-d', OUTPUT.FOLDER, '-t', '0x04']
 finaltimeout = 60
 finalencoding = 'gbk'
