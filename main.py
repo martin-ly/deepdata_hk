@@ -44,10 +44,12 @@ class ContextJS(Thread):
         self.task = task
 
     def onerror(self, msg, err = True):
-        '''
+        ''' 输出已经被重定向
         msg: 接收unicode编码
         '''
         self.error = err
+        if DEBUG:
+            msg = '[PID=%d] ' % os.getpid() + msg
         try:
             #print msg.encode(terminal_charset, 'xmlcharrefreplace')
             print msg
@@ -98,13 +100,14 @@ class ContextJS(Thread):
         self.jsfile, output, kwargs, jstimeout, self.pyfile, self.comment, self.bbname, self.retry_count = self.task
         kwargs['today'] = today
         if DEBUG:
-            self.onerror(u'[%d] Thread begin: %s, params = %s' % (os.getpid(), self.jsfile, kwargs), False)
+            with loglock:
+                print u'>>>>> [PID=%d][RETRY=%d] %s, params = %s' % (os.getpid(), int(self.retry_count), self.jsfile, kwargs)
 
-#        if not DEBUG:
         self.stdout = StringIO.StringIO()
         self.oldstdout, sys.stdout = sys.stdout, self.stdout
-#        else:
-#            self.oldstdout = sys.stdout
+
+        if not DEBUG:
+            self.onerror(u'>>>>> [%d] %s %s' % (int(self.retry_count), self.comment, self.jsfile if self._runjs else self.pyfile + '.py'), False)
 
         self.htmlfile = '%s/%s' % (today, output)
         out, self.retry = ['OK',], False
@@ -125,7 +128,7 @@ class ContextJS(Thread):
                 time.sleep(0.01)
             if p.poll() == None:
                 p.kill()
-                self.safe_print(u'超时')
+                print u'超时'
 
             out, _ = p.communicate()
             out = command_str + out
@@ -203,7 +206,9 @@ def spider_process():
 
         if ctx.isAlive():
             ctx._stop()
-            ctx.onerror(u'任务超时')
+            ctx.retry = True
+            ctx.retry_count += 1
+            ctx.onerror(u'任务超时', False if ctx.retry_count < retry_num else True)
 
         sys.stdout = ctx.oldstdout
         with loglock:
@@ -240,7 +245,7 @@ def OnTaskFinished(cmd, timeout, encoding):
     while time.time() < deadline and p.poll() == None:
         time.sleep(0.01)
     if p.poll() == None:
-        self.safe_print(u'超时')
+        print u'超时'
         p.kill()
     out, _ = p.communicate()
 

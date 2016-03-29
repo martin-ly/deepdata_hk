@@ -19,13 +19,14 @@ def run(ctx, html, kwargs):
         l = ''.join([x.strip().encode('utf8') for x in anchor.stripped_strings if len(x) > 0]).split(', ')
         kwargs['brokerno'] = ','.join(x for x in l if len(l) > 0)
 
+    ctx.onfinish([fname, fname + '.png'])
+    ctx.set_output(OUTPUT.FOLDER, folder)
+
     s = zmq.Context().socket(zmq.REQ)
     s.connect(EndPoint)
     s.send_pyobj(kwargs)
     s.recv_pyobj()
     s.close()
-    ctx.onfinish([fname, fname + '.png'])
-    ctx.set_output(OUTPUT.FOLDER, folder)
     return kwargs
 
 if __name__ == '__main__':

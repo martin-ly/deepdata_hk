@@ -21,8 +21,11 @@ def run(code):
         p.kill()
     else:
         out, _ = p.communicate()
-        lastdate = int(out.strip(' \t\r\n'))
-        lastdate = 20160119
+        out = out.strip(' \t\r\n').lower()
+        if out == 'null':
+            lastdate = 19700101
+        else:
+            lastdate = int(out)
 
     idx, sidx, num, items = -1, [], 0, []
     for i, s in enumerate(anchor.stripped_strings):
