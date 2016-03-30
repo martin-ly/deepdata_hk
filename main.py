@@ -240,7 +240,7 @@ def OnTaskFinished(cmd, timeout, encoding):
     encoding: __init__.py中预置的finalencoding
     '''
     begin = clock()
-    p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE)#, shell = True)
     deadline = time.time() + timeout
     while time.time() < deadline and p.poll() == None:
         time.sleep(0.01)
