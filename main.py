@@ -234,22 +234,21 @@ def OnNewTask(sockm, queue, waitingps, task):
         sockm.send_pyobj(task)
 
 def OnTaskFinished(cmd, timeout, encoding):
-    ''' 后置任务
+    ''' 启动后置任务并在后置任务超时后杀死，后置任务自己管理输出和日志
     cmd: __init__.py中预置的finalinvoke
     timeout: __init__.py中预置的finaltimeout
     encoding: __init__.py中预置的finalencoding
     '''
     begin = clock()
-    p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE)#, shell = True)
+    p = subprocess.Popen(cmd, shell = True)
     deadline = time.time() + timeout
     while time.time() < deadline and p.poll() == None:
         time.sleep(0.01)
     if p.poll() == None:
         print u'超时'
         p.kill()
-    out, _ = p.communicate()
 
-    msg = '\n%s\n%s\nExecuted Time = %.2f Seconds.\n' % (cmd, out.decode(encoding), clock() - begin)
+    msg = '\n%s\nExecuted %.2f Seconds.\n' % (cmd, clock() - begin)
     with loglock:
         print msg
         with open(failog, 'a+') as flog:
