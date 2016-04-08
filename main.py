@@ -2,16 +2,24 @@
 #coding: utf-8
 
 '''
-程序分为两个部分：js代码负责抓取网页，py脚本负责解析页面，main.py把两部分脚本串联在一起，相当于驱动引擎。
+程序分为两个部分：网页抓取部分和页面解析部分，main.py把两部分脚本串联在一起，相当于驱动引擎。
+
+引擎从settings.py中读取爬虫的初始设置。
+
+网页抓取部分可以由casperjs，也可以由python程序完成，页面解析部分现在是由python程序独立完成的。
 
 js代码中，脚本获得html页面后需要将其写入磁盘文件中供py脚本使用，echo到concole的信息，包括爬取页面过程中
 的异常信息，都会被main.py获得，脚本在最后返回OK时，表示获取html成功。main将调用对应的py模块的run方法来
 解析js输出的html文件。否则表示获取html失败，全部输出将被记录日志。
 
-py脚本的run方法可以调用ctx.onerror返回解析失败信息，该信息会记录在错误日志中，但是脚本会继续运行，调用
-ctx.runjs可以从py脚本中调用js脚本继续抓取工作。
+ContextJS是引擎的核心类，每个ContextJS实例都是一个爬虫数据抓取和解析的任务，它包含以下重要方法：
+run: 启动爬虫，该方法将首先调用网页抓取部分，然后根据抓取结果来决定是否调用页面解析部分
+onerror: py脚本调用该方法向引擎报告错误信息，该信息会记录在错误日志中，但是脚本会继续运行
+onfinish: 任务结束时调用该方法来删除临时文件
+set_output: 设置输出的宏变量，宏用于任务配置中
+addtask: py脚本调用该方法向引擎增加一个新的爬虫任务
 
-编码格式：py和js脚本必须使用utf8编码
+编码格式：py和js脚本必须使用utf8编码，py脚本输出的字符串必须是unicode编码
 '''
 
 import subprocess, time, os, sys, traceback, zmq, cPickle, StringIO
@@ -30,6 +38,7 @@ EndPoint = 'tcp://127.0.0.1:9066'
 def enum(**enums):
     return type('Enum', (), enums)
 
+#宏定义
 OUTPUT = enum(
     FOLDER = 0,      # 输出目录绝对路径
     FILE = 1         # 输出文件绝对路径
@@ -233,11 +242,10 @@ def OnNewTask(sockm, queue, waitingps, task):
         sockm.send('%d' % p.pid, zmq.SNDMORE)
         sockm.send_pyobj(task)
 
-def OnTaskFinished(cmd, timeout, encoding):
+def OnTaskFinished(cmd, timeout):
     ''' 启动后置任务并在后置任务超时后杀死，后置任务自己管理输出和日志
     cmd: __init__.py中预置的finalinvoke
     timeout: __init__.py中预置的finaltimeout
-    encoding: __init__.py中预置的finalencoding
     '''
     begin = clock()
     p = subprocess.Popen(cmd, shell = True)
@@ -295,7 +303,6 @@ if __name__ == '__main__':
         task = [_mod.jsfile, _mod.output, _mod.params, _mod.jstimeout, _mod.pymodname, _mod.description, name, 0, pkgname]
         ts[name]['final_invoke'] = getattr(_mod, 'finalinvoke', None)
         ts[name]['final_timeout'] = getattr(_mod, 'finaltimeout', 60)
-        ts[name]['finalencoding'] = getattr(_mod, 'finalencoding', 'utf8')
         with loglock:
             with open(failog, 'a+') as flog:
                 flog.write('===== Task %s Begin at %s =====\n' % (name.encode('utf8'), time.strftime('%H:%M:%S')))
@@ -356,7 +363,7 @@ if __name__ == '__main__':
                             with open(failog, 'a+') as flog:
                                 flog.write('command = %s\nout = %s\n%s' % (command, unicode(out).encode('utf8'), traceback.format_exc()))
                     else:
-                        t = Thread(target = OnTaskFinished, args = (cmd, ts[name]['final_timeout'], ts[name]['finalencoding']))
+                        t = Thread(target = OnTaskFinished, args = (cmd, ts[name]['final_timeout']))
                         finishts.append(t)
                         t.start()
 

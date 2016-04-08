@@ -1,9 +1,11 @@
 #coding: utf8
 
-import re, deephk
+import re, os, deephk
 from bs4 import BeautifulSoup
+from main import OUTPUT
 
 def run(ctx, html, kwargs):
+    folder = os.path.join(os.path.dirname(__file__), kwargs['today'])
     bs = BeautifulSoup(open(html), 'html5lib', from_encoding='utf8')
 
     total, idx = 0, [-1, -1, -1, -1]
@@ -57,6 +59,7 @@ def run(ctx, html, kwargs):
     else:
         deephk.save_qszz(kwargs['today'], kwargs['code'], partners)
         ctx.onfinish([html,])
+        ctx.set_output(OUTPUT.FOLDER, folder)
     return partners
 
 if __name__ == '__main__':
