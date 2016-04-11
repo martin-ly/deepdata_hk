@@ -22,13 +22,13 @@ init_tasks = {
     1 : {
         'description' : u'港股.券商追踪.股份解码',
         'package' : 'hk_qszz_gfjm',
-        'enable' : False,
+        'enable' : True,
     },
 
     2 : {
         'description' : u'港股.市场沽空',
         'package' : 'hk_shortselling',
-        'enable' : True,
+        'enable' : False,
     },
 
     3 : {
