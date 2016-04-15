@@ -150,9 +150,9 @@ class ContextJS(Thread):
         ### out: utf8编码 ###
 
         #0-成功,1-失败,2-重试,3-不需要调用py
-        if out[-1] == 'OK' or out[-2] == 'OK':
+        if out[-1] == 'OK' or (len(out) >= 2 and out[-2] == 'OK'):
             ret = 0
-        elif out[-1] == 'PASS' or out[-2] == 'PASS':
+        elif out[-1] == 'PASS' or (len(out) >= 2 and out[-2] == 'PASS'):
             ret = 3
         else:
             self.retry = True

@@ -1,4 +1,4 @@
-// casperjs test gfjm.js --output=111 --code=00001 --today=20160408
+// casperjs test gfjm.js --output=111 --code=00010 --today=20160412
 
 var fs = require('fs');
 var utils = require('utils');

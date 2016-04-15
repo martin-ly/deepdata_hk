@@ -61,7 +61,7 @@ def run(code):
     #输出文件
     with open('%s.gfjm.tmp' % code, 'w') as fp:
         for row in rows:
-            fp.write('%s\n' % ';'.join(row))
+            fp.write('%s\n' % '\1'.join(row))
 
     #click任务文件
     with open('%s.gfjm.click.all' % code, 'w') as fp:

@@ -2,7 +2,6 @@
 
 import os, re, deephk, opencc
 from bs4 import BeautifulSoup, NavigableString
-from main import OUTPUT
 
 cc = opencc.OpenCC('zht2zhs.ini')
 
@@ -22,7 +21,7 @@ def run(ctx, code, kwargs):
             main = fp.readlines()
     except:
         main = []
-    main = [x.strip(' \t\r\n').split(';') for x in main]
+    main = [x.strip(' \t\r\n').split('\1') for x in main]
 
     output, tmpfiles = [], []
     for i, x in enumerate(main):
@@ -52,6 +51,7 @@ def run(ctx, code, kwargs):
         #英文名字
         anchor = bs.find('span', id='lblEngName')
         if anchor is None:
+            x[0] = x[0].replace(';', '\\;')     #预防抓到的字段里面存在';'的情况
             result = re.search(r'(.+?)\((.+)\)', x[0])
             if result is None:  #无英文名，表示该持股者原始名字是英文名，其繁体中文和简体中文字段全部填英文名
                 x.insert(1, x[0])
@@ -75,7 +75,7 @@ def run(ctx, code, kwargs):
                 else:   #两部分都是繁中
                     sname = cc.convert(x[0].decode('utf8'))
                     x.insert(1, sname.encode('utf8'))
-                    x.insert(2, '')
+                    x.insert(2, x[0])
         else:   #有英文名，表示其原始名字是繁体中文，第二个字段填简体中文，第三个字段填这里抓到的英文名
             sim_name = cc.convert(x[0].decode('utf8'))
             x.insert(1, sim_name.encode('utf8'))
@@ -97,8 +97,9 @@ def run(ctx, code, kwargs):
     tmpfiles.append('%s/%s.gfjm.html' % (today, code))
     tmpfiles.append('%s/%s.gfjm.png' % (today, code))
     if ctx:
+        from main import OUTPUT
         ctx.onfinish(tmpfiles)
         ctx.set_output(OUTPUT.FOLDER, folder)
 
 if __name__ == '__main__':
-    run(None, '20160311/00001_gfjm.html', {'today' : '20160311', 'code' : '03968'})
+    run(None, '20160412/00010_gfjm.html', {'today' : '20160412', 'code' : '00010'})
