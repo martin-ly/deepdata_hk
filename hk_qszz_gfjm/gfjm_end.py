@@ -14,7 +14,6 @@ def issascii(s):
 def run(ctx, code, kwargs):
     code = kwargs['code']
     today = kwargs['today']
-    folder = os.path.join(os.path.dirname(__file__), kwargs['today'])
 
     try:
         with open('%s/%s.gfjm.tmp' % (today, code), 'r') as fp:
@@ -97,9 +96,7 @@ def run(ctx, code, kwargs):
     tmpfiles.append('%s/%s.gfjm.html' % (today, code))
     tmpfiles.append('%s/%s.gfjm.png' % (today, code))
     if ctx:
-        from main import OUTPUT
         ctx.onfinish(tmpfiles)
-        ctx.set_output(OUTPUT.FOLDER, folder)
 
 if __name__ == '__main__':
     run(None, '20160412/00010_gfjm.html', {'today' : '20160412', 'code' : '00010'})

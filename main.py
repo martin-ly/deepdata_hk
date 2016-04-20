@@ -16,7 +16,6 @@ ContextJS是引擎的核心类，每个ContextJS实例都是一个爬虫数据�
 run: 启动爬虫，该方法将首先调用网页抓取部分，然后根据抓取结果来决定是否调用页面解析部分
 onerror: py脚本调用该方法向引擎报告错误信息，该信息会记录在错误日志中，但是脚本会继续运行
 onfinish: 任务结束时调用该方法来删除临时文件
-set_output: 设置输出的宏变量，宏用于任务配置中
 addtask: py脚本调用该方法向引擎增加一个新的爬虫任务
 
 编码格式：py和js脚本必须使用utf8编码，py脚本输出的字符串必须是unicode编码
@@ -35,21 +34,11 @@ failog = os.getcwd() + '/log/%s.log' % today
 loglock = Lock()
 EndPoint = 'tcp://127.0.0.1:9066'
 
-def enum(**enums):
-    return type('Enum', (), enums)
-
-#宏定义
-OUTPUT = enum(
-    FOLDER = 0,      # 输出目录绝对路径
-    FILE = 1         # 输出文件绝对路径
-)
-
 class ContextJS(Thread):
     def __init__(self, pkgname, cb, task):
         Thread.__init__(self)
         self.pkgmod = __import__(pkgname)
         self.cb, self.error, self.subtasks = cb, False, []
-        self.output = {}
         self.task = task
 
     def onerror(self, msg, err = True):
@@ -77,9 +66,6 @@ class ContextJS(Thread):
         for f in files:
             if os.path.exists(f):
                 os.remove(f)
-
-    def set_output(self, k, v):
-        self.output[k] = v
 
     def addtask(self, subtask):
         '''动态添加子任务需要遵照 [jsfile, output, params, jstimeout, pymodname, comment] 格式
@@ -231,7 +217,7 @@ def spider_process():
             addsubtask(task)
         if len(task) == 8:
             task.append(pkgname)
-        addsubtask(('finished', task, ctx.output))         #结束任务
+        addsubtask(('finished', task))         #结束任务
 
 def OnNewTask(sockm, queue, waitingps, task):
     try:
@@ -328,7 +314,7 @@ if __name__ == '__main__':
             OnNewTask(sockm, queue, waitingps, task)
 
         else:                       #子任务完成
-            word, t, out = task
+            word, t = task
             try:
                 next_task = queue.pop(0)
             except:
@@ -354,18 +340,9 @@ if __name__ == '__main__':
                         flog.write('========== FINISH: %s >>> %dh %dm %ds ==========\n' % (name.encode('utf8'), hours, minutes, seconds))
 
                 if ts[name]['final_invoke']:
-                    command = ts[name]['final_invoke']
-                    try:
-                        cmd = map(lambda x: unicode(out[x]) if isinstance(x, int) else x, command)
-                    except:
-                        with loglock:
-                            print traceback.format_exc()
-                            with open(failog, 'a+') as flog:
-                                flog.write('command = %s\nout = %s\n%s' % (command, unicode(out).encode('utf8'), traceback.format_exc()))
-                    else:
-                        t = Thread(target = OnTaskFinished, args = (cmd, ts[name]['final_timeout']))
-                        finishts.append(t)
-                        t.start()
+                    t = Thread(target = OnTaskFinished, args = (ts[name]['final_invoke'], ts[name]['final_timeout']))
+                    finishts.append(t)
+                    t.start()
 
                 ts.pop(name)
                 if len(ts) == 0:

@@ -3,7 +3,6 @@
 import hkscc_participants
 import check_participant
 import time, os
-from main import OUTPUT
 
 today = time.strftime('%Y%m%d')
 path = __path__[0] + '/' + today
@@ -23,7 +22,6 @@ pymodname = 'hkscc_participants'
 #任务描述，unicode编码
 description = u'港股结算参与者'
 #该任务全部结束后，需要调用的后置程序，引擎调用该程序，但是不会捕获它的输出，也不会代替它处理日志
-#OUTPUT.FOLDER为引擎定义的宏，参见main.py文件，引擎调用时会将宏置换成合适的定义，宏通过ctx.set_output方法设置
-finalinvoke = ['start', '/wait', 'hkexe/DeepSecurityMaster.exe', '-d', OUTPUT.FOLDER, '-t', '0x08']
+finalinvoke = ['start', '/wait', 'hkexe/DeepSecurityMaster.exe', '-d', os.path.join(os.path.dirname(__file__), today), '-t', '0x08']
 #后置任务执行超时时间，秒，超过该时间引擎将杀死后置任务进程，不设置该项默认60秒
 finaltimeout = 60

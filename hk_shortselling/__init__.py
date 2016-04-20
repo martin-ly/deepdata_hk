@@ -2,7 +2,6 @@
 
 import shortselling
 import time, os
-from main import OUTPUT
 
 today = time.strftime('%Y%m%d')
 path = __path__[0] + '/' + today
@@ -15,5 +14,5 @@ output = None
 params = {}
 pymodname = 'shortselling'
 description = u'港股市场沽空'
-finalinvoke = ['start', '/wait', 'hkexe/DeepSecurityMaster.exe', '-d', OUTPUT.FOLDER, '-t', '0x04']
+finalinvoke = ['start', '/wait', 'hkexe/DeepSecurityMaster.exe', '-d', os.path.join(os.path.dirname(__file__), today), '-t', '0x04']
 finaltimeout = 60
