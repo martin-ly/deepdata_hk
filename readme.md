@@ -80,12 +80,9 @@ del                             |
 
 列名       | 说明 | 字段类型 | 长度 | NULL | PK | INDEX | 备注
 -----------|-----|---------|----:|------|-----|------|-----
-NoCode             | 经纪编号起始编码||||Y||
-EndNoCode   | 经纪编号结束编码||||Y||
-securityid|参与者编码|varchar|10|N|N|Y|
-Name_English       | 公司名称（英文）
-Name_TC            | 公司名称
-ShortName_TC       | 公司简称
+NoCode             | 经纪编号起始编码|||Y||Y|
+EndNoCode   | 经纪编号结束编码|||Y||Y|
+securityid|参与者编码|varchar|10|N||Y|
 RecordDate         | 记录日期
 EditDate               | 编辑日期
 Remark             |
@@ -221,12 +218,48 @@ exe->spider: notify
 
 # 系统运维监控说明
 
-1. 定义计划任务，定时调度相应爬虫。
+## 环境安装
+
+1. 从[Python主页]安装Python2的32位版本，安装到C:\Python27，并在系统路径中加入安装路径C:\Python27
+2. 从[CasperJS主页]安装CasperJS，安装到C:\casperjs，安装路径为`$CasperJS`
+3. 从[PhantomJS主页]安装PhantomJS，直接解压到C盘根目录，安装路径为`$PhantomJS`
+4. 在系统路径中添加`$CasperJS\bin`目录和`$PhantomJS\bin`目录
+5. 安装zmq：`pip install pyzmq`
+6. 安装简繁转换库opencc：`pip install opencc-python`
+
+## 系统初始化
+
+1. sql目录下保存了系统初始化需要的sql脚本。
+2. create_table.sql：建表脚本。
+2. init.sql《券商追踪》《股份解码》：根据原表数据初始化新表数据。
+3. init.sql《经纪公司简称》：根据原表数据的公司简称部分初始化新表的公司简称，**必须**在新表数据的“参与者编号与经纪编号的对应关系”至少执行过一次以后才能执行，否则没有效果。
+4. searchHolderStock.sql替换了原来的存储过程，**请先备份原存储过程**。
+5. sp_GetShortSelling.sql替换了原来的存储过程，**请先备份原存储过程**。
+
+## 系统配置
+
+> 配置项的详细含义参见配置文件注释
+
+1. settings.py
+2. hkexe/config.ini
+3. hkexe/tsci.udl
+
+## 运维监控
+
+1. 每日备份基础表：Security，SecuritySeat。
+2. 定义计划任务，定时调度相应爬虫。
+	3. 参与者编号与经纪编号的对应关系，以及券商追踪，股份解码可以一起调度。
+	4. 市场沽空分两次调度，一次是调度上午的数据，一次是调度全日的数据。
 2. 使用zabbix对系统进行监控。
 2. 使用监控日志的方式（Host>>目标主机>>item>>create item）添加监控项，参考[zabbix log monitor]。
 3. 要监控的日志文件，位于安装路径的log目录下，名为yyyymmdd.log的文件。
-4. 处理异常时，可以参考相应爬虫生成的现场文件，一般有两个：png和html，分别保存了故障时的网页截图和网页内容，一般可以快速定位到故障原因。
+4. 处理异常时，根据log目录下的日志文件分析是入库产生的问题还是爬虫数据问题。
+	5. 入库问题可以在hkexe/log目录下参考入库日志。
+	6. 爬虫数据问题可以参考相应爬虫生成的现场文件，一般有两个：png和html，分别保存了故障时的网页截图和网页内容，一般可以快速定位到故障原因。
 
 
 [spider_frame]: https://dl.dropboxusercontent.com/u/641927/myspider/spider_frame.png
 [zabbix log monitor]: https://www.ttlsa.com/zabbix/zabbix-monitor-logs/
+[Python主页]: http://www.python.org
+[CasperJS主页]: http://casperjs.org/
+[PhantomJS主页]: http://phantomjs.org/

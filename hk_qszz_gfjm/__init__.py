@@ -20,4 +20,4 @@ description = u'获取当日全部港股代码'
 finalinvoke = ['start', '/wait', 'hkexe/DeepSecurityMaster.exe', '-d', os.path.join(os.path.dirname(__file__), today), '-t', '0x03']
 finaltimeout = 36000
 # 证券代码过滤，如果这里定义了代码，则只爬这些代码的数据，否则爬全部
-codes = ['08071']
+# codes = ['08071']
