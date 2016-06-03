@@ -65,7 +65,10 @@ class ContextJS(Thread):
         '''删除子任务产生的临时文件'''
         for f in files:
             if os.path.exists(f):
-                os.remove(f)
+                try:
+                    os.remove(f)
+                except Exception, e:
+                    print 'Error:', e
 
     def addtask(self, subtask):
         '''动态添加子任务需要遵照 [jsfile, output, params, jstimeout, pymodname, comment] 格式
@@ -249,6 +252,7 @@ def OnTaskFinished(cmd, timeout):
             flog.write(msg.encode('utf8'))
 
 if __name__ == '__main__':
+    os.chdir(sys.path[0])
     runmode = 0         #不带参数，表示按照settings.py里面定义来运行
     if len(sys.argv) > 1:
         runid = sys.argv[-1].lower()
