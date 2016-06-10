@@ -6,10 +6,18 @@ from bs4 import BeautifulSoup
 def run(ctx, html, kwargs):
     bs = BeautifulSoup(open(html), 'html5lib', from_encoding='utf8')
 
+    anchor = bs.find(text=re.compile(r'Shareholding date'))
+    if anchor is None:
+        ctx.onerror(u'找不到定位点1')
+        return
+    td = anchor.find_parent('td').find('tr').find_all('td')[1]
+    page_today = td.text.strip().split('/')
+    page_today = page_today[2]+page_today[1]+page_today[0]
+
     total, idx = 0, [-1, -1, -1, -1]
     anchor = bs.find(text=re.compile(r'result list title'))
     if anchor is None:
-        ctx.onerror(u'找不到定位点1')
+        ctx.onerror(u'找不到定位点2')
         return
     tds = anchor.find_parent('tr').find_next_sibling('tr').find(text=re.compile(r'Header')).find_next_sibling('tbody').find('tr').find_all('td', recursive=False)
     total = len(tds)
@@ -32,7 +40,7 @@ def run(ctx, html, kwargs):
 
     anchor = bs.find(text=re.compile(r'Search Result'))
     if anchor is None:
-        ctx.onerror(u'找不到定位点2')
+        ctx.onerror(u'找不到定位点3')
         return
 
     partners = []
@@ -55,11 +63,11 @@ def run(ctx, html, kwargs):
     if len(partners) == 0:
         ctx.onerror(u'没有抓取到数据')
     else:
-        deephk.save_qszz(kwargs['today'], kwargs['code'], partners)
+        deephk.save_qszz(kwargs['today'], page_today, kwargs['code'], partners)
         ctx.onfinish([html,])
     return partners
 
 if __name__ == '__main__':
-    partners = run(None, '111.html', {'today' : '20160224', 'code' : '01153'})
+    partners = run(None, '111.html', {'today' : '20160608', 'code' : '00001'})
     for p in partners:
         print p
