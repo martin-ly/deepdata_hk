@@ -30,7 +30,7 @@ from settings import *
 ThreadStop = Thread._Thread__stop
 
 today = time.strftime('%Y%m%d')
-failog = os.getcwd() + '/log/%s.log' % today
+failog = sys.path[0] + '/log/%s.log' % today
 loglock = Lock()
 EndPoint = 'tcp://127.0.0.1:9066'
 
