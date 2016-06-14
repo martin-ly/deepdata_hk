@@ -1,6 +1,15 @@
 
 [TOC]
 
+```
+当日证券代码表
+http://www.hkexnews.hk/sdw/search/stocklist_c.asp?SortBy=StockCode&Lang=CHI&ShareholdingDate=20160613
+股份解码
+http://sdinotice.hkex.com.hk/di/NSSrchCorp.aspx?src=MAIN&lang=ZH&in=1&
+券商追踪
+http://www.hkexnews.hk/sdw/search/search_sdw_c.asp  POST
+```
+
 # 系统架构
 
 ## 在设计框架时考虑的问题

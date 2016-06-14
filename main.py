@@ -49,10 +49,9 @@ class ContextJS(Thread):
         if DEBUG:
             msg = '[PID=%d] ' % os.getpid() + msg
         try:
-            #print msg.encode(terminal_charset, 'xmlcharrefreplace')
             print msg
         except:
-            msg = '+++++\n\n' + traceback.format_exc() + '\n+++++\n'
+            msg = '+++++\n[PID=%d]\n' % os.getpid() + traceback.format_exc() + '+++++\n'
             print msg
 
         if err or DEBUG:
@@ -213,7 +212,7 @@ def spider_process():
             try:
                 print ctx.stdout.getvalue().encode(terminal_charset, 'xmlcharrefreplace')
             except:
-                msg = '+++++\n\n' + traceback.format_exc() + '\n+++++\n'
+                msg = '+++++\n[PID=%d]\n' % os.getpid() + traceback.format_exc() + '+++++\n'
                 print msg
         if ctx.retry and ctx.retry_count < retry_num:
             task[-1] = ctx.retry_count

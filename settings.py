@@ -34,6 +34,6 @@ init_tasks = {
     3 : {
         'description' : u'港股.参与者编号与经纪编号的对应关系',
         'package' : 'hk_codemap',
-        'enable' : True,
+        'enable' : False,
     }
 }
