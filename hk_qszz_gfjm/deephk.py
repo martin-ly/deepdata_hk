@@ -12,8 +12,3 @@ def save_gfjm(today, code, data):
     with open(today + '/%s.gfjm' % code, 'w') as fp:
         for x in data:
             fp.write('%s\n' % ';'.join(x))
-
-def savefile(data, fname):
-    fp = open(fname, 'wb')
-    fp.write(data)
-    fp.close()

@@ -1,35 +1,44 @@
 #coding: utf8
 
-import urllib, urllib2, re, sys, json, subprocess, time
+import re, sys, json, subprocess, time
 from bs4 import BeautifulSoup, NavigableString
+import gfjm_end
+
+sys.path.append('..')
+from utils import *
+
+header = {
+    'User-Agent' : 'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko',
+    'Accept-Language' : 'zh-CN',
+    'Accept' : 'text/html, application/xhtml+xml, */*'
+}
 
 def run(ctx, html, kwargs):
     today = kwargs['today']
     y, m, d = today[:4], today[4:6], today[6:]
     today = '/'.join([d, m, y])
     lastyday = '/'.join([d, m, str(int(y)-1)])
-    url = 'http://sdinotice.hkex.com.hk/di/NSSrchCorpList.aspx?sa1=cl&scsd=%s&sced=%s&sc=%d&src=MAIN&lang=ZH' % (lastyday, today, int(kwargs['code']))
 
-    data = urllib2.urlopen(url).read()
+    url = 'http://sdinotice.hkex.com.hk/di/NSSrchCorpList.aspx?sa1=cl&scsd=%s&sced=%s&sc=%d&src=MAIN&lang=ZH' % (lastyday, today, int(kwargs['code']))
+    data = GetUrl(url, header = header)
+
     bs = BeautifulSoup(data, 'html5lib', from_encoding='big5')
     node = bs.find('a', text = u'所有披露權益通知')
     if node is None:
-        ctx.onerror(u'找不到定位点')
+        ctx.onerror(u'找不到定位点1')
         return
 
-    path = node['href']
-    url = 'http://sdinotice.hkex.com.hk/di/' + path
+    url = 'http://sdinotice.hkex.com.hk/di/' + node['href']
+    data = GetUrl(url, header = header)
 
-    data = urllib2.urlopen(url).read()
     bs = BeautifulSoup(data, 'html5lib', from_encoding='big5')
-
-    rec_count = bs.find('span', id = 'lblRecCount')
+    rec_count = int(bs.find('span', id = 'lblRecCount').string)
     if rec_count == 0:      #无记录
         return
 
     anchor = bs.find('tr', class_='boldtxtw')
     if anchor is None:
-        ctx.onerror(u'找不到定位点')
+        ctx.onerror(u'找不到定位点2')
         return
 
     lastdate = 0
@@ -48,7 +57,7 @@ def run(ctx, html, kwargs):
         else:
             lastdate = int(out)
 
-    idx, sidx, num, items = -1, [], 0, []
+    idx, sidx, items = -1, [], []
     for i, s in enumerate(anchor.stripped_strings):
         if s.find(u'事件的日期') != -1:
             idx = i
@@ -77,19 +86,17 @@ def run(ctx, html, kwargs):
                         row.append(s.encode('utf8'))
                     items.append(node['href'])     #生成需点击元素的链接地址
                     rows.append(row)
-            num += 1
 
-    for row in rows:
-        print row.decode('utf8')
-#    #输出文件
-#    with open('%s.gfjm.tmp' % code, 'w') as fp:
-#        for row in rows:
-#            fp.write('%s\n' % '\1'.join(row))
-#
-#    #click任务文件
-#    with open('%s.gfjm.click.all' % code, 'w') as fp:
-#        json.dump(items, fp)
+    #输出文件
+    with open('%s/%s.gfjm.tmp' % (kwargs['today'], kwargs['code']), 'w') as fp:
+        for row in rows:
+            fp.write('%s\n' % '\1'.join(row))
 
-    #返回js的click元素的xpath表达式
-    for item in items:
-        print item.decode('utf8')
+    for idx, item in enumerate(items):
+        url = 'http://sdinotice.hkex.com.hk/di/' + item
+        data = GetUrl(url, header = header)
+        fname = kwargs['today'] + '/' + kwargs['code'] + '.' + str(idx+1) + '.gfjm.click.html'
+        with open(fname, 'w') as fp:
+            fp.write(data)
+
+    gfjm_end.run(ctx, None, kwargs)

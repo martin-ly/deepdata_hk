@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup, NavigableString
 
 def run(code):
     code = sys.argv[-1]
-    bs = BeautifulSoup(open(code+'.gfjm.html'), 'html5lib', from_encoding='utf8')
+    bs = BeautifulSoup(open(code+'.gfjm.html'), 'html5lib', from_encoding=kwargs['file-encoding'])
     anchor = bs.find('tr', class_='boldtxtw')
     if anchor is None:
         ctx.onerror(u'找不到定位点')

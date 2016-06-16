@@ -5,8 +5,7 @@ from bs4 import BeautifulSoup
 
 def run(ctx, html, kwargs):
     codes = getattr(sys.modules[__package__], "codes", [])
-    # casperjs输出的文件已经是utf8编码，而不管在html文件头中指定的编码
-    bs = BeautifulSoup(open(html), 'html5lib', from_encoding='utf8')
+    bs = BeautifulSoup(open(html), 'html5lib', from_encoding=kwargs['file-encoding'])
     trs = bs.find_all('tr', class_=re.compile(r'TableContentStyle\d{1}'))
     if len(trs) == 0:
         ctx.onerror(u'抓取的证券代码数量为0')

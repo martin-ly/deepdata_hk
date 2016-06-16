@@ -40,6 +40,7 @@ class ContextJS(Thread):
         self.pkgmod = __import__(pkgname)
         self.cb, self.error, self.subtasks = cb, False, []
         self.task = task
+        self.tmp_file_list = []
 
     def onerror(self, msg, err = True):
         ''' 输出已经被重定向
@@ -60,14 +61,22 @@ class ContextJS(Thread):
                     flog.write('>>>>> [%d] %s %s\n' % (int(self.retry_count), self.comment.encode('utf8'), self.jsfile if self._runjs else self.pyfile + '.py'))
                     flog.write(msg.encode('utf8') + '\n')
 
-    def onfinish(self, files):
+    def save(self, fname, data):
+        with open(fname, 'wb') as fp:
+            fp.write(data)
+            self.tmp_file_list.append(fname)
+
+    def onfinish(self, files = None):
         '''删除子任务产生的临时文件'''
+        if files is None:
+            files = self.tmp_file_list
+            self.tmp_file_list = []
         for f in files:
             if os.path.exists(f):
                 try:
                     os.remove(f)
-                except Exception, e:
-                    print 'Error:', e
+                except:
+                    pass
 
     def addtask(self, subtask):
         '''动态添加子任务需要遵照 [jsfile, output, params, jstimeout, pymodname, comment] 格式
@@ -134,6 +143,9 @@ class ContextJS(Thread):
                 out.append('未知执行结果，按失败处理')
             out = [l.strip() for l in out if len(l.strip()) > 0]
 
+            #casperjs保存的文件均为utf8编码
+            kwargs['file-encoding'] = 'utf8'
+
         ### js执行完成，下面执行与js相关的py来解析网页 ###
         ### out: utf8编码 ###
 
@@ -175,6 +187,8 @@ class ContextJS(Thread):
                         self.retry_count += 1
                         ret = traceback.format_exc()
                         self.onerror(ret.decode('utf8'))
+
+        self.onfinish()
 
 def spider_process():
     def addsubtask(task):

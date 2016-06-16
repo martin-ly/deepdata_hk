@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup, NavigableString
 
 def run(ctx, html, kwargs):
     fname = kwargs['today'] + '/' + kwargs['code']+'.jjbh.html'
-    bs = BeautifulSoup(open(fname), 'html5lib', from_encoding='utf8')
+    bs = BeautifulSoup(open(fname), 'html5lib', from_encoding=kwargs['file-encoding'])
     kwargs['code'] = 'B' + kwargs['code']
     anchor = bs.find('td', text = re.compile(u'.*經紀代號.*'))
     if anchor is None:

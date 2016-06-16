@@ -4,7 +4,7 @@ import re, os, deephk
 from bs4 import BeautifulSoup
 
 def run(ctx, html, kwargs):
-    bs = BeautifulSoup(open(html), 'html5lib', from_encoding='utf8')
+    bs = BeautifulSoup(open(html), 'html5lib', from_encoding=kwargs['file-encoding'])
 
     anchor = bs.find(text=re.compile(r'Shareholding date'))
     if anchor is None:

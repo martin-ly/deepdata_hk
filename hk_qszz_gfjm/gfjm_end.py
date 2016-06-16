@@ -25,7 +25,7 @@ def run(ctx, code, kwargs):
     output, tmpfiles = [], []
     for i, x in enumerate(main):
         fclick = '%s/%s.%d.gfjm.click.html' % (today, code, i+1)
-        bs = BeautifulSoup(open(fclick), 'html5lib', from_encoding='utf8')
+        bs = BeautifulSoup(open(fclick), 'html5lib', from_encoding=kwargs['file-encoding'])
 
         #表格类型
         anchor = bs.find('span', id='lblCaption')
