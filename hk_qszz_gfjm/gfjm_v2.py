@@ -23,6 +23,10 @@ def run(ctx, html, kwargs):
     data = GetUrl(url, header = header)
 
     bs = BeautifulSoup(data, 'html5lib', from_encoding='big5')
+    rec_count = int(bs.find('span', id = 'lblRecCount').string)
+    if rec_count == 0:      #无记录
+        return
+
     node = bs.find('a', text = u'所有披露權益通知')
     if node is None:
         ctx.onerror(u'找不到定位点1')
@@ -55,7 +59,11 @@ def run(ctx, html, kwargs):
         if out == 'null':
             lastdate = 19700101
         else:
-            lastdate = int(out)
+            try:
+                lastdate = int(out)
+            except:
+                print u'lastdate =', lastdate
+                raise
 
     idx, sidx, items = -1, [], []
     for i, s in enumerate(anchor.stripped_strings):

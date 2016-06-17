@@ -24,7 +24,7 @@ def run(ctx, html, kwargs):
     bs = BeautifulSoup(data, 'html5lib', from_encoding='big5')
     form = bs.find('form', attrs = {'name' : 'mainform'})
     if form is None:
-        ctx.onerror(u'找不到定位点1')
+        ctx.onerror(u'找不到定位点_v2.1')
         return
 
     txt_today_d = form.find('input', id = 'txt_today_d')
@@ -59,7 +59,7 @@ def run(ctx, html, kwargs):
     sel_ShareholdingDate_y = sel_ShareholdingDate_y.string if sel_ShareholdingDate_y else ''
 
     if txt_today_d == '' or txt_today_m == '' or txt_today_y == '' or current_page == '' or stock_market == '' or sessionToken == '' or IsExist_Slt_Stock_Id == '' or IsExist_Slt_Part_Id == '' or rdo_SelectSortBy == '' or sel_ShareholdingDate_d == '' or sel_ShareholdingDate_m == '' or sel_ShareholdingDate_y == '':
-        ctx.onerror(u'找不到定位点2: txt_today_d=%s&txt_today_m=%s&txt_today_y=%s&current_page=%s&stock_market=%s&sessionToken=%s&IsExist_Slt_Stock_Id=%s&IsExist_Slt_Part_Id=%s&rdo_SelectSortBy=%s&sel_ShareholdingDate_d=%s&sel_ShareholdingDate_m=%s&sel_ShareholdingDate_y=%s&' % (txt_today_d, txt_today_m, txt_today_y, current_page, stock_market, sessionToken, IsExist_Slt_Stock_Id, IsExist_Slt_Part_Id, rdo_SelectSortBy, sel_ShareholdingDate_d, sel_ShareholdingDate_m, sel_ShareholdingDate_y))
+        ctx.onerror(u'找不到定位点_v2.2: txt_today_d=%s&txt_today_m=%s&txt_today_y=%s&current_page=%s&stock_market=%s&sessionToken=%s&IsExist_Slt_Stock_Id=%s&IsExist_Slt_Part_Id=%s&rdo_SelectSortBy=%s&sel_ShareholdingDate_d=%s&sel_ShareholdingDate_m=%s&sel_ShareholdingDate_y=%s&' % (txt_today_d, txt_today_m, txt_today_y, current_page, stock_market, sessionToken, IsExist_Slt_Stock_Id, IsExist_Slt_Part_Id, rdo_SelectSortBy, sel_ShareholdingDate_d, sel_ShareholdingDate_m, sel_ShareholdingDate_y))
         return
 
     postdata = (
@@ -81,6 +81,7 @@ def run(ctx, html, kwargs):
         ('txt_Participant_name', ''),
     )
     data = GetUrl(url, header = header, postdata = postdata, opener = opener)
-    ctx.save(html, data)
-    kwargs['file-encoding'] = 'big5'
-    qszz.run(ctx, html, kwargs)
+    if data.find(u'沒有找到紀錄'.encode('big5')) == -1:
+        ctx.save(html, data)
+        kwargs['file-encoding'] = 'big5'
+        qszz.run(ctx, html, kwargs)

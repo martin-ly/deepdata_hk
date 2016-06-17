@@ -185,8 +185,9 @@ class ContextJS(Thread):
                     except:
                         self.retry = True
                         self.retry_count += 1
-                        ret = traceback.format_exc()
-                        self.onerror(ret.decode('utf8'))
+                        if self.retry_count >= retry_num:
+                            ret = traceback.format_exc()
+                            self.onerror(ret.decode('utf8'))
 
         self.onfinish()
 

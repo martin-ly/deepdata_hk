@@ -6,7 +6,7 @@
 DEBUG = False
 
 #爬虫进程数量
-process_num = 10
+process_num = 20
 
 #失败重试次数
 retry_num = 5
