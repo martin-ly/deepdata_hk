@@ -24,5 +24,5 @@ def run(ctx, html, kwargs):
         else:
             if codes is not None and code not in codes:
                 continue
-            #ctx.addtask([None, code + '_qszz.html', {'code' : code}, 30, 'qszz_v2', u'%s[%s] - 券商追踪' % (name, code)])
+            ctx.addtask([None, code + '_qszz.html', {'code' : code}, 30, 'qszz_v2', u'%s[%s] - 券商追踪' % (name, code)])
             ctx.addtask([None, code + '_gfjm.html', {'code' : code}, 300, 'gfjm_v2', u'%s[%s] - 股份解码' % (name, code)])
