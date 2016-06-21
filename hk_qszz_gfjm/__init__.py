@@ -27,4 +27,4 @@ finalinvoke = ['start', '/wait', 'hkexe/DeepSecurityMaster.exe', '-d', os.path.j
 finaltimeout = 36000
 
 # 证券代码过滤，如果这里定义了代码，则只爬这些代码的数据，否则爬全部
-#codes = ['00001']
+#codes = ['00444', '01277', '00715']

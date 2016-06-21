@@ -1,6 +1,6 @@
 #coding: utf8
 
-import re, sys, json, subprocess, time
+import re, sys, json, subprocess, time, cookielib
 from bs4 import BeautifulSoup, NavigableString
 import gfjm_end
 
@@ -9,7 +9,7 @@ from utils import *
 
 header = {
     'User-Agent' : 'Mozilla/5.0 (Windows NT 6.1; WOW64; Trident/7.0; rv:11.0) like Gecko',
-    'Accept-Language' : 'zh-CN',
+    'Accept-Language' : 'zh-TW',
     'Accept' : 'text/html, application/xhtml+xml, */*'
 }
 
@@ -19,8 +19,11 @@ def run(ctx, html, kwargs):
     today = '/'.join([d, m, y])
     lastyday = '/'.join([d, m, str(int(y)-1)])
 
+    cj = cookielib.CookieJar()
+    opener = urllib2.build_opener(urllib2.HTTPHandler(0), urllib2.HTTPCookieProcessor(cj))
+
     url = 'http://sdinotice.hkex.com.hk/di/NSSrchCorpList.aspx?sa1=cl&scsd=%s&sced=%s&sc=%d&src=MAIN&lang=ZH' % (lastyday, today, int(kwargs['code']))
-    data = GetUrl(url, header = header)
+    data = GetUrl(url, header = header, opener = opener)
 
     bs = BeautifulSoup(data, 'html5lib', from_encoding='big5')
     rec_count = int(bs.find('span', id = 'lblRecCount').string)
@@ -33,7 +36,7 @@ def run(ctx, html, kwargs):
         return
 
     url = 'http://sdinotice.hkex.com.hk/di/' + node['href']
-    data = GetUrl(url, header = header)
+    data = GetUrl(url, header = header, opener = opener)
 
     bs = BeautifulSoup(data, 'html5lib', from_encoding='big5')
     rec_count = int(bs.find('span', id = 'lblRecCount').string)
@@ -107,4 +110,5 @@ def run(ctx, html, kwargs):
         with open(fname, 'w') as fp:
             fp.write(data)
 
+    kwargs['file-encoding'] = 'big5'
     gfjm_end.run(ctx, None, kwargs)
