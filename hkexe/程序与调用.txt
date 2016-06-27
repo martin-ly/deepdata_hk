@@ -1,0 +1,36 @@
+1：
+getdate.exe
+参数：-s 股票代码
+
+命令行
+getdate.exe -s E00001
+
+2：
+DeepSecurityMaster.exe
+参数：
+-d 路径
+-t 文件类型
+
+文件类型
+#define FILETYPE_QSZZ	0x01							// 券商追踪
+#define FILETYPE_GFJM	0x02							// 股份解码
+#define FILETYPE_SSGK	0x04							// 市场沽空
+#define FILETYPE_BASE	0x08							// 经纪公司基本状况和经纪公司席位关系
+#define FILETYPE_ALL	(FILETYPE_QSZZ|FILETYPE_GFJM|FILETYPE_SSGK|FILETYPE_BASE)	// 四种类型的文件都要处理
+
+表示多个时可以按位或。比如0x03表示需要出来券商追踪和股份解码
+
+命令行：
+
+DeepSecurityMaster.exe -d c:\windows\dir -t 0x03
+
+3:新增参数，支持只做SQL文件入库
+DeepSecurityMaster.exe
+参数：
+-s路径
+
+注意：这里的路径是券商追踪股份解码等文件所在的路径，不是sql的路径，sql路径程序直接在配置文件里读到。而这个路径是为了取得当前数据的日期，生成最近五日数据的时候用到。
+
+命令行：
+DeepSecurityMaster.exe -sC:\Users\Administrator\Desktop\20160608
+
